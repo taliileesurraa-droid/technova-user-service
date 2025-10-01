@@ -2,6 +2,7 @@ const { Payment } = require("../models/indexModel");
 const { asyncHandler } = require("../middleware/errorHandler");
 const { deleteFile } = require("../utils/fileHelper");
 const path = require("path");
+const { getPassengerById } = require("../utils/userService");
 
 // CREATE with file upload
 exports.createPayment = asyncHandler(async (req, res) => {
@@ -43,7 +44,29 @@ exports.getPayments = asyncHandler(async (req, res) => {
       : null,
   }));
 
-  res.json({ success: true, data: paymentsWithUrls });
+  // Enrich with passenger info (name, phone, email)
+  const uniquePassengerIds = [...new Set(paymentsWithUrls.map(p => p.passenger_id).filter(Boolean))];
+  const authHeader = req.headers && req.headers.authorization ? { headers: { Authorization: req.headers.authorization } } : {};
+  const passengerInfoMap = new Map();
+  await Promise.all(uniquePassengerIds.map(async (pid) => {
+    try {
+      const info = await getPassengerById(pid, authHeader);
+      if (info) passengerInfoMap.set(pid, info);
+    } catch (_) {}
+  }));
+
+  const enriched = paymentsWithUrls.map(p => {
+    const info = passengerInfoMap.get(p.passenger_id);
+    if (!info) return p;
+    return {
+      ...p,
+      passenger_name: info.name || null,
+      passenger_phone: info.phone || null,
+      passenger_email: info.email || null,
+    };
+  });
+
+  res.json({ success: true, data: enriched });
 });
 
 // READ one - Admin sees all, Passenger sees only their own
@@ -70,6 +93,19 @@ exports.getPayment = asyncHandler(async (req, res) => {
       ? `${req.protocol}://${req.get("host")}/${payment.receipt_image}`
       : null,
   };
+
+  // Enrich single payment with passenger info
+  try {
+    if (paymentWithUrl.passenger_id) {
+      const authHeader = req.headers && req.headers.authorization ? { headers: { Authorization: req.headers.authorization } } : {};
+      const info = await getPassengerById(paymentWithUrl.passenger_id, authHeader);
+      if (info) {
+        paymentWithUrl.passenger_name = info.name || null;
+        paymentWithUrl.passenger_phone = info.phone || null;
+        paymentWithUrl.passenger_email = info.email || null;
+      }
+    }
+  } catch (_) {}
 
   res.json({ success: true, data: paymentWithUrl });
 });
