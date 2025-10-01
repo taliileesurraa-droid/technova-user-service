@@ -1252,7 +1252,7 @@
 												"exec": [
 													"if (pm.response.code === 201) {",
 													"  const json = pm.response.json();",
-													"  if (json._id) pm.environment.set('passengerId', json._id);",
+                                                    "  if (json.id) pm.environment.set('passengerId', json.id);",
 													"  if (json.name) pm.environment.set('passengerName', json.name);",
 													"}"
 												],
@@ -1274,7 +1274,7 @@
 										],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"name\": \"Alice Johnson\",\n  \"phone\": \"1234567893\",\n  \"email\": \"alice.johnson@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"emergencyContacts\": [\n    {\n      \"name\": \"Bob Johnson\",\n      \"phone\": \"1234567894\",\n      \"relationship\": \"Husband\"\n    }\n  ]\n}"
+                                            "raw": "{\n  \"name\": \"Alice Johnson\",\n  \"phone\": \"+251911111113\",\n  \"email\": \"alice.johnson@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"emergencyContacts\": [\n    {\n      \"name\": \"Bob Johnson\",\n      \"phone\": \"+251911111114\",\n      \"relationship\": \"Spouse\"\n    }\n  ]\n}"
 										},
 										"url": {
 											"raw": "{{baseUrl}}/v1/passengers",
@@ -1366,7 +1366,7 @@
 										],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"name\": \"Alice Johnson-Smith\",\n  \"email\": \"alice.smith@example.com\",\n  \"status\": \"active\",\n  \"notes\": \"VIP customer - frequent rider\"\n}"
+                                            "raw": "{\n  \"contractId\": \"CNTR-2025-0001\",\n  \"wallet\": 150.75\n}"
 										},
 										"url": {
 											"raw": "{{baseUrl}}/v1/passengers/{{passengerId}}",
