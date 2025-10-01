@@ -27,6 +27,29 @@ if (data.paymentPreference && !Number.isInteger(data.paymentPreference)) {
   return res.status(400).json({ message: 'paymentPreference must be an integer' });
 }
 
+// Normalize emergencyContacts if provided (accept JSON string or object/array)
+if (Object.prototype.hasOwnProperty.call(data, 'emergencyContacts')) {
+  const ec = data.emergencyContacts;
+  if (ec == null || ec === '') {
+    data.emergencyContacts = null;
+  } else if (typeof ec === 'string') {
+    try {
+      const parsed = JSON.parse(ec);
+      data.emergencyContacts = JSON.stringify(parsed);
+    } catch (err) {
+      return res.status(400).json({ message: 'emergencyContacts must be valid JSON' });
+    }
+  } else if (typeof ec === 'object') {
+    try {
+      data.emergencyContacts = JSON.stringify(ec);
+    } catch (err) {
+      return res.status(400).json({ message: 'Failed to serialize emergencyContacts' });
+    }
+  } else {
+    return res.status(400).json({ message: 'emergencyContacts must be an object/array or JSON string' });
+  }
+}
+
 // Validate carName if provided
 if (data.carName && (typeof data.carName !== 'string' || data.carName.trim().length === 0)) {
   return res.status(400).json({ 
@@ -72,6 +95,29 @@ if (data.vehicleType && !['mini', 'sedan', 'van', 'suv', 'mpv', 'motorbike', 'ba
   return res.status(400).json({ 
     message: 'Invalid vehicleType. Must be one of: mini, sedan, van, suv, mpv, motorbike, bajaj' 
   });
+}
+
+// Normalize emergencyContacts if provided (accept JSON string or object/array)
+if (Object.prototype.hasOwnProperty.call(data, 'emergencyContacts')) {
+  const ec = data.emergencyContacts;
+  if (ec == null || ec === '') {
+    data.emergencyContacts = null;
+  } else if (typeof ec === 'string') {
+    try {
+      const parsed = JSON.parse(ec);
+      data.emergencyContacts = JSON.stringify(parsed);
+    } catch (err) {
+      return res.status(400).json({ message: 'emergencyContacts must be valid JSON' });
+    }
+  } else if (typeof ec === 'object') {
+    try {
+      data.emergencyContacts = JSON.stringify(ec);
+    } catch (err) {
+      return res.status(400).json({ message: 'Failed to serialize emergencyContacts' });
+    }
+  } else {
+    return res.status(400).json({ message: 'emergencyContacts must be an object/array or JSON string' });
+  }
 }
 
 // Validate carName if provided
