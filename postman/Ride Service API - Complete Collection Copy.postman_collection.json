@@ -152,6 +152,41 @@
 		{
 			"name": "🔐 Authentication",
 			"item": [
+                {
+                    "name": "Passenger Register (Public)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"John Smith\",\n  \"phone\": \"+251911111110\",\n  \"email\": \"john.smith@example.com\",\n  \"password\": \"SecurePass123!\"\n}"
+                        },
+                        "url": { "raw": "{{baseUrl}}/v1/auth/passenger/register", "host": ["{{baseUrl}}"], "path": ["v1","auth","passenger","register"] }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Passenger Register by Phone (Public)",
+                    "request": {
+                        "method": "POST",
+                        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+                        "body": { "mode": "raw", "raw": "{\n  \"phoneNumber\": \"+251911111110\"\n}" },
+                        "url": { "raw": "{{baseUrl}}/v1/auth/passenger/register-phone", "host": ["{{baseUrl}}"], "path": ["v1","auth","passenger","register-phone"] }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Passenger Verify OTP (Public)",
+                    "request": {
+                        "method": "POST",
+                        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+                        "body": { "mode": "raw", "raw": "{\n  \"phoneNumber\": \"+251911111110\",\n  \"otp\": \"123456\"\n}" },
+                        "url": { "raw": "{{baseUrl}}/v1/auth/passenger/verify-otp", "host": ["{{baseUrl}}"], "path": ["v1","auth","passenger","verify-otp"] }
+                    },
+                    "response": []
+                },
 				{
 					"name": "Passenger Login",
 					"event": [

@@ -7,9 +7,8 @@ const { authenticatePhoneUser } = require('../middleware/phoneAuth');
 router.post('/request-otp', phoneAuthController.requestOtp);
 router.post('/verify-otp', phoneAuthController.verifyOtp);
 router.post('/refresh-token', phoneAuthController.refreshAccessToken);
-// Disabled passenger self-registration via phone; admin must create passengers
-// router.post('/passenger/register-phone', phoneAuthController.registerPassengerByPhone);
-// router.post('/passenger/verify-otp', phoneAuthController.verifyPassengerOtpRedirect);
+router.post('/passenger/register-phone', phoneAuthController.registerPassengerByPhone);
+router.post('/passenger/verify-otp', phoneAuthController.verifyPassengerOtpRedirect);
 router.post('/login', phoneAuthController.loginWithPhone);
 router.post('/refresh-token', phoneAuthController.refreshToken);
 

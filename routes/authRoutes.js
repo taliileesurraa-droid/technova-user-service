@@ -4,8 +4,7 @@ const ctrl = require('../controllers/authController');
 const rateLimit = require('../middleware/rateLimit');
 const pwd = require('../controllers/passwordController');
 
-// Disabled: Passenger self-registration now restricted. Use admin endpoint.
-// router.post('/passenger/register', rateLimit({ windowMs: 60_000, max: 10 }), ctrl.registerPassenger);
+router.post('/passenger/register', rateLimit({ windowMs: 60_000, max: 10 }), ctrl.registerPassenger);
 router.post('/passenger/login', rateLimit({ windowMs: 60_000, max: 20 }), ctrl.loginPassenger);
 router.post('/passenger/reset-password', rateLimit({ windowMs: 60_000, max: 10 }), ctrl.resetPassword);
 
