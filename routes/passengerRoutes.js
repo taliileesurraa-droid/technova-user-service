@@ -5,10 +5,10 @@ const auth = require('../middleware/auth');
 const { requirePermissions } = require('../middleware/rbac');
 
 // Admin routes (require permissions)
+router.post('/', auth(), requirePermissions('passenger:create'), ctrl.create);
 router.get('/', auth(), requirePermissions('passenger:read'), ctrl.list);
 router.get('/:id', auth(), requirePermissions('passenger:read'), ctrl.get);
-// Disabled update endpoint to prevent passenger self-modification via generic route
-// router.put('/:id', auth(), requirePermissions('passenger:update'), ctrl.update);
+router.put('/:id', auth(), requirePermissions('passenger:update'), ctrl.update);
 router.delete('/:id', auth(), requirePermissions('passenger:delete'), ctrl.remove);
 
 // Passenger self-control routes
