@@ -1,0 +1,11 @@
+# Database Configuration
+DB_HOST=localhost
+DB_NAME=contract_service_db
+DB_USER=root
+DB_PASSWORD=123
+
+# Server Configuration
+PORT=3000
+
+JWT_SECRET=
+JWT_EXPIRES_IN=7d

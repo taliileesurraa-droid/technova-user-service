@@ -1,0 +1,41 @@
+const express = require("express");
+const router = express.Router();
+const { authorize } = require("../middleware/auth");
+const controller = require("../controllers/paymentController");
+const { createUploader } = require("../utils/multerUploader");
+
+// Configure multer for payment receipts
+const paymentUploader = createUploader({
+  subfolder: "payments",
+  allowedMimeTypes: [
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+  ],
+  maxFileSizeMB: 5,
+});
+
+// Admin: full access, Passenger: create & read their own
+router.post(
+  "/",
+  authorize("admin", "passenger"),
+  paymentUploader.single("receipt_image"),
+  controller.createPayment
+);
+
+router.get("/", authorize("admin", "passenger"), controller.getPayments);
+
+router.get("/:id", authorize("admin", "passenger"), controller.getPayment);
+
+router.put(
+  "/:id",
+  authorize("admin"),
+  paymentUploader.single("receipt_image"),
+  controller.updatePayment
+);
+
+router.delete("/:id", authorize("admin"), controller.deletePayment);
+
+module.exports = router;
