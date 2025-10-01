@@ -7,139 +7,203 @@
 		"_exporter_id": "41294772",
 		"_collection_link": "https://orange-robot-568778.postman.co/workspace/My-Workspace~ff1859bd-dcb9-4caf-81cf-eb40da57c1e5/collection/41294772-df9efac8-cd9e-4286-8aa2-2d7e1d871c5b?action=share&source=collection_link&creator=41294772"
 	},
-	"item": [
-		{
-			"name": "Auth from auth service",
-			"item": [
-				{
-					"name": "admin login",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"const responseData = pm.response.json();",
-									"    pm.collectionVariables.set(\"authToken\", responseData.token);"
-								],
-								"type": "text/javascript",
-								"packages": {}
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"username\": \"rootadmin\",\n  \"password\": \"admin123\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{authUrl}}/auth/admin/login",
-							"host": [
-								"{{authUrl}}"
-							],
-							"path": [
-								"auth",
-								"admin",
-								"login"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "passenger login",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"const responseData = pm.response.json();",
-									"    pm.collectionVariables.set(\"authToken\", responseData.token);"
-								],
-								"type": "text/javascript",
-								"packages": {}
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"email\": \"fitsum@test.com\",\n  \"password\": \"Passw0rd!\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{authUrl}}/auth/passenger/login",
-							"host": [
-								"{{authUrl}}"
-							],
-							"path": [
-								"auth",
-								"passenger",
-								"login"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "driver login",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"const responseData = pm.response.json();",
-									"pm.collectionVariables.set(\"authToken\", responseData.token);",
-									""
-								],
-								"type": "text/javascript",
-								"packages": {}
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"email\": \"driver@example.com\",\n  \"password\": \"Passw0rd!\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{authUrl}}/auth/driver/login",
-							"host": [
-								"{{authUrl}}"
-							],
-							"path": [
-								"auth",
-								"driver",
-								"login"
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "💰 Discounts",
-			"item": [
+\t"item": [
+\t\t{
+\t\t\t"name": "👤 Passenger",
+\t\t\t"item": [
+\t\t\t\t{
+\t\t\t\t\t"name": "Auth",
+\t\t\t\t\t"item": [
+\t\t\t\t\t\t{
+\t\t\t\t\t\t\t"name": "passenger login",
+\t\t\t\t\t\t\t"event": [
+\t\t\t\t\t\t\t\t{
+\t\t\t\t\t\t\t\t\t"listen": "test",
+\t\t\t\t\t\t\t\t\t"script": {
+\t\t\t\t\t\t\t\t\t\t"exec": [
+\t\t\t\t\t\t\t\t\t\t\t"const responseData = pm.response.json();",
+\t\t\t\t\t\t\t\t\t\t\t"    pm.collectionVariables.set(\"authToken\", responseData.token);"
+\t\t\t\t\t\t\t\t\t\t],
+\t\t\t\t\t\t\t\t\t\t"type": "text/javascript",
+\t\t\t\t\t\t\t\t\t\t"packages": {}
+\t\t\t\t\t\t\t\t\t}
+\t\t\t\t\t\t\t\t}
+\t\t\t\t\t\t],
+\t\t\t\t\t\t"request": {
+\t\t\t\t\t\t\t"method": "POST",
+\t\t\t\t\t\t\t"header": [],
+\t\t\t\t\t\t\t"body": {
+\t\t\t\t\t\t\t\t"mode": "raw",
+\t\t\t\t\t\t\t\t"raw": "{\n  \"email\": \"fitsum@test.com\",\n  \"password\": \"Passw0rd!\"\n}",
+\t\t\t\t\t\t\t\t"options": {
+\t\t\t\t\t\t\t\t\t"raw": {
+\t\t\t\t\t\t\t\t\t\t"language": "json"
+\t\t\t\t\t\t\t\t\t}
+\t\t\t\t\t\t\t\t}
+\t\t\t\t\t\t\t},
+\t\t\t\t\t\t\t"url": {
+\t\t\t\t\t\t\t\t"raw": "{{authUrl}}/auth/passenger/login",
+\t\t\t\t\t\t\t\t"host": [
+\t\t\t\t\t\t\t\t\t"{{authUrl}}"
+\t\t\t\t\t\t\t\t],
+\t\t\t\t\t\t\t\t"path": [
+\t\t\t\t\t\t\t\t\t"auth",
+\t\t\t\t\t\t\t\t\t"passenger",
+\t\t\t\t\t\t\t\t\t"login"
+\t\t\t\t\t\t\t\t]
+\t\t\t\t\t\t\t}
+\t\t\t\t\t},
+\t\t\t\t{
+\t\t\t\t\t"name": "Payments",
+\t\t\t\t\t"item": [
+{{PAYMENTS_BLOCK}}
+\t\t\t\t\t]
+\t\t\t\t},
+\t\t\t\t{
+\t\t\t\t\t"name": "Subscriptions",
+\t\t\t\t\t"item": [
+{{SUBSCRIPTIONS_BLOCK}}
+\t\t\t\t\t]
+\t\t\t\t}
+\t\t\t]
+\t\t},
+\t\t{
+\t\t\t"name": "🚗 Driver",
+\t\t\t"item": [
+\t\t\t\t{
+\t\t\t\t\t"name": "Auth",
+\t\t\t\t\t"item": [
+\t\t\t\t\t\t{
+\t\t\t\t\t\t\t"name": "driver login",
+\t\t\t\t\t\t\t"event": [
+\t\t\t\t\t\t\t\t{
+\t\t\t\t\t\t\t\t\t"listen": "test",
+\t\t\t\t\t\t\t\t\t"script": {
+\t\t\t\t\t\t\t\t\t\t"exec": [
+\t\t\t\t\t\t\t\t\t\t\t"const responseData = pm.response.json();",
+\t\t\t\t\t\t\t\t\t\t\t"pm.collectionVariables.set(\"authToken\", responseData.token);",
+\t\t\t\t\t\t\t\t\t\t\t""
+\t\t\t\t\t\t\t\t\t\t],
+\t\t\t\t\t\t\t\t\t\t"type": "text/javascript",
+\t\t\t\t\t\t\t\t\t\t"packages": {}
+\t\t\t\t\t\t\t\t\t}
+\t\t\t\t\t\t\t\t}
+\t\t\t\t\t\t],
+\t\t\t\t\t\t"request": {
+\t\t\t\t\t\t\t"method": "POST",
+\t\t\t\t\t\t\t"header": [],
+\t\t\t\t\t\t\t"body": {
+\t\t\t\t\t\t\t\t"mode": "raw",
+\t\t\t\t\t\t\t\t"raw": "{\n  \"email\": \"driver@example.com\",\n  \"password\": \"Passw0rd!\"\n}",
+\t\t\t\t\t\t\t\t"options": {
+\t\t\t\t\t\t\t\t\t"raw": {
+\t\t\t\t\t\t\t\t\t\t"language": "json"
+\t\t\t\t\t\t\t\t\t}
+\t\t\t\t\t\t\t\t}
+\t\t\t\t\t\t\t},
+\t\t\t\t\t\t\t"url": {
+\t\t\t\t\t\t\t\t"raw": "{{authUrl}}/auth/driver/login",
+\t\t\t\t\t\t\t\t"host": [
+\t\t\t\t\t\t\t\t\t"{{authUrl}}"
+\t\t\t\t\t\t\t\t],
+\t\t\t\t\t\t\t\t"path": [
+\t\t\t\t\t\t\t\t\t"auth",
+\t\t\t\t\t\t\t\t\t"driver",
+\t\t\t\t\t\t\t\t\t"login"
+\t\t\t\t\t\t\t\t]
+\t\t\t\t\t\t\t}
+\t\t\t\t\t},
+\t\t\t\t{
+\t\t\t\t\t"name": "Ride Schedules",
+\t\t\t\t\t"item": [
+{{RIDES_BLOCK}}
+\t\t\t\t\t]
+\t\t\t\t}
+\t\t\t]
+\t\t},
+\t\t{
+\t\t\t"name": "🛠 Admin",
+\t\t\t"item": [
+\t\t\t\t{
+\t\t\t\t\t"name": "Auth",
+\t\t\t\t\t"item": [
+\t\t\t\t\t\t{
+\t\t\t\t\t\t\t"name": "admin login",
+\t\t\t\t\t\t\t"event": [
+\t\t\t\t\t\t\t\t{
+\t\t\t\t\t\t\t\t\t"listen": "test",
+\t\t\t\t\t\t\t\t\t"script": {
+\t\t\t\t\t\t\t\t\t\t"exec": [
+\t\t\t\t\t\t\t\t\t\t\t"const responseData = pm.response.json();",
+\t\t\t\t\t\t\t\t\t\t\t"    pm.collectionVariables.set(\"authToken\", responseData.token);"
+\t\t\t\t\t\t\t\t\t\t],
+\t\t\t\t\t\t\t\t\t\t"type": "text/javascript",
+\t\t\t\t\t\t\t\t\t\t"packages": {}
+\t\t\t\t\t\t\t\t\t}
+\t\t\t\t\t\t\t\t}
+\t\t\t\t\t\t],
+\t\t\t\t\t\t"request": {
+\t\t\t\t\t\t\t"method": "POST",
+\t\t\t\t\t\t\t"header": [],
+\t\t\t\t\t\t\t"body": {
+\t\t\t\t\t\t\t\t"mode": "raw",
+\t\t\t\t\t\t\t\t"raw": "{\n  \"username\": \"rootadmin\",\n  \"password\": \"admin123\"\n}",
+\t\t\t\t\t\t\t\t"options": {
+\t\t\t\t\t\t\t\t\t"raw": {
+\t\t\t\t\t\t\t\t\t\t"language": "json"
+\t\t\t\t\t\t\t\t\t}
+\t\t\t\t\t\t\t\t}
+\t\t\t\t\t\t\t},
+\t\t\t\t\t\t\t"url": {
+\t\t\t\t\t\t\t\t"raw": "{{authUrl}}/auth/admin/login",
+\t\t\t\t\t\t\t\t"host": [
+\t\t\t\t\t\t\t\t\t"{{authUrl}}"
+\t\t\t\t\t\t\t\t],
+\t\t\t\t\t\t\t\t"path": [
+\t\t\t\t\t\t\t\t\t"auth",
+\t\t\t\t\t\t\t\t\t"admin",
+\t\t\t\t\t\t\t\t\t"login"
+\t\t\t\t\t\t\t\t]
+\t\t\t\t\t\t\t}
+\t\t\t\t\t},
+\t\t\t\t{
+\t\t\t\t\t"name": "Contracts",
+\t\t\t\t\t"item": [
+{{CONTRACTS_BLOCK}}
+\t\t\t\t\t]
+\t\t\t\t},
+\t\t\t\t{
+\t\t\t\t\t"name": "Discounts",
+\t\t\t\t\t"item": [
+{{DISCOUNTS_BLOCK}}
+\t\t\t\t\t]
+\t\t\t\t}
+\t\t\t]
+\t\t},
+\t\t{
+\t\t\t"name": "🏠 Health Check",
+\t\t\t"request": {
+\t\t\t\t"method": "GET",
+\t\t\t\t"header": [],
+\t\t\t\t"url": {
+\t\t\t\t\t"raw": "https://ride-contract-service.capitalinvestmenttradingplc.com",
+\t\t\t\t\t"protocol": "https",
+\t\t\t\t\t"host": [
+\t\t\t\t\t\t"ride-contract-service",
+\t\t\t\t\t\t"capitalinvestmenttradingplc",
+\t\t\t\t\t\t"com"
+\t\t\t\t\t]
+\t\t\t\t}
+\t\t\t},
+\t\t\t"response": []
+\t\t},
+\t\t{
+\t\t\t"name": "🧪 Integration Test - Full Workflow",
+\t\t\t"item": [
+{{INTEGRATION_BLOCK}}
+\t\t\t]
+\t\t}
+\t],
 				{
 					"name": "CREATE - Create Discount",
 					"event": [
