@@ -87,13 +87,6 @@ exports.createSubscription = asyncHandler(async (req, res) => {
 
     const subscription = await Subscription.create(subscriptionData);
 
-    // Get passenger details for response
-    const authHeader = req.headers && req.headers.authorization ? { headers: { Authorization: req.headers.authorization } } : {};
-    let passengerInfo = null;
-    try {
-      passengerInfo = await getPassengerById(passengerId, authHeader);
-    } catch (_) {}
-
     res.status(201).json({
       success: true,
       message: "Subscription created successfully with fare estimation",
