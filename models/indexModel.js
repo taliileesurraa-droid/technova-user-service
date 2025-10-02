@@ -135,11 +135,11 @@ const syncDB = async () => {
     await Contract.sync({ alter: true });
     console.log("✅ Contract table synced successfully!");
 
-    await Payment.sync({ alter: true });
-    console.log("✅ Payment table synced successfully!");
-
     await Subscription.sync({ alter: true });
     console.log("✅ Subscription table synced successfully!");
+
+    await Payment.sync({ alter: true });
+    console.log("✅ Payment table synced successfully!");
 
     await RideSchedule.sync({ alter: true });
     console.log("✅ RideSchedule table synced successfully!");

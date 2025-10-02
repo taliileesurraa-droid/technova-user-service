@@ -13,10 +13,16 @@ const Payment = sequelize.define(
     subscription_id: {
       type: DataTypes.UUID,
       allowNull: true,
+      references: { model: "subscriptions", key: "id" },
+      onUpdate: "CASCADE",
+      onDelete: "SET NULL",
     },
     contract_id: {
       type: DataTypes.UUID,
-      allowNull: false,
+      allowNull: true,
+      references: { model: "contracts", key: "id" },
+      onUpdate: "CASCADE",
+      onDelete: "SET NULL",
     },
     passenger_id: {
       type: DataTypes.UUID,
