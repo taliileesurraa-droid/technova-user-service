@@ -7,6 +7,18 @@ const Trip = sequelize.define("Trip", {
     defaultValue: DataTypes.UUIDV4,
     primaryKey: true,
   },
+  scheduled_pickup_time: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  actual_pickup_time: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  actual_dropoff_time: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
   contract_id: {             // <-- add this column
     type: DataTypes.UUID,
     allowNull: true,         // must allow null for SET NULL to work

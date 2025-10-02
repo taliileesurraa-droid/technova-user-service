@@ -452,6 +452,7 @@ exports.createTrip = asyncHandler(async (req, res) => {
       fare_amount: fare_amount || subscription.final_fare,
       distance_km: distance_km || subscription.distance_km,
       status: "SCHEDULED",
+      scheduled_pickup_time: scheduled_time ? new Date(scheduled_time) : new Date(),
       notes
     });
 

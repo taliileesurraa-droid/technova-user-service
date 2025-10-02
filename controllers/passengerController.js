@@ -8,7 +8,7 @@ exports.getAssignedDriver = asyncHandler(async (req, res) => {
   const passengerId = req.params.id;
 
   // Check if user can access this passenger's data
-  if (req.user.type === "passenger" && req.user.id !== passengerId) {
+  if (req.user.type === "passenger" && String(req.user.id) !== String(passengerId)) {
     return res.status(403).json({ success: false, message: "Access denied" });
   }
 
@@ -148,7 +148,7 @@ exports.getTripHistory = asyncHandler(async (req, res) => {
   const passengerId = req.params.id;
 
   // Check if user can access this passenger's data
-  if (req.user.type === "passenger" && req.user.id !== passengerId) {
+  if (req.user.type === "passenger" && String(req.user.id) !== String(passengerId)) {
     return res.status(403).json({ success: false, message: "Access denied" });
   }
 

@@ -8,7 +8,7 @@ exports.getSubscribedPassengers = asyncHandler(async (req, res) => {
   const driverId = req.params.id;
 
   // Check if user can access this driver's data
-  if (req.user.type === "driver" && req.user.id !== driverId) {
+  if (req.user.type === "driver" && String(req.user.id) !== String(driverId)) {
     return res.status(403).json({ success: false, message: "Access denied" });
   }
 
@@ -147,7 +147,7 @@ exports.getContractExpirations = asyncHandler(async (req, res) => {
   const driverId = req.params.id;
 
   // Check if user can access this driver's data
-  if (req.user.type === "driver" && req.user.id !== driverId) {
+  if (req.user.type === "driver" && String(req.user.id) !== String(driverId)) {
     return res.status(403).json({ success: false, message: "Access denied" });
   }
 

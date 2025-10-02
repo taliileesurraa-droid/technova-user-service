@@ -32,63 +32,64 @@ Discount.hasMany(Contract, {
 // Contract ↔ Payment (1:N)
 Contract.hasMany(Payment, {
   foreignKey: "contract_id",
-  as: "paymentsFromContract",
+  as: "payments",
 });
 Payment.belongsTo(Contract, {
   foreignKey: "contract_id",
-  as: "contractRef",
+  as: "contract",
 });
 
 // Subscription ↔ Payment (1:N)
 Subscription.hasMany(Payment, {
   foreignKey: "subscription_id",
-  as: "paymentsFromSubscription",
+  as: "payments",
 });
 Payment.belongsTo(Subscription, {
   foreignKey: "subscription_id",
-  as: "subscriptionRef",
+  as: "subscription",
 });
 
 // Contract ↔ Subscription (1:N)
 Contract.hasMany(Subscription, {
   foreignKey: "contract_id",
-  as: "subscriptionsFromContract",
+  as: "subscriptions",
 });
 Subscription.belongsTo(Contract, {
   foreignKey: "contract_id",
-  as: "contractRefForSubscription",
+  as: "contract",
 });
 
 // Contract ↔ RideSchedule (1:N)
 Contract.hasMany(RideSchedule, {
   foreignKey: "contract_id",
-  as: "rideSchedulesFromContract",
+  as: "ride_schedules",
 });
 RideSchedule.belongsTo(Contract, {
   foreignKey: "contract_id",
-  as: "contractRefForRideSchedule",
+  as: "contract",
 });
 
 // Trip ↔ Contract (N:1)
 Trip.belongsTo(Contract, {
   foreignKey: "contract_id",
+  as: "contract",
   onDelete: "RESTRICT",  // or "CASCADE" if you want to delete trips with contract
   onUpdate: "CASCADE",
 });
 
 Contract.hasMany(Trip, {
   foreignKey: "contract_id",
-  as: "tripsFromContract",
+  as: "trips",
 });
 
 // Trip ↔ Subscription (N:1)
 Trip.belongsTo(Subscription, {
   foreignKey: "subscription_id",
-  as: "subscriptionRefForTrip",
+  as: "subscription",
 });
 Subscription.hasMany(Trip, {
   foreignKey: "subscription_id",
-  as: "tripsFromSubscription",
+  as: "trips",
 });
 
 // Trip ↔ TripSchedule (1:1)
@@ -98,7 +99,7 @@ Trip.hasOne(TripSchedule, {
 });
 TripSchedule.belongsTo(Trip, {
   foreignKey: "trip_id",
-  as: "tripRefForSchedule",
+  as: "trip",
 });
 
 // Payment ↔ Passenger (external reference → user service)

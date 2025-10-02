@@ -22,4 +22,13 @@ router.get("/payments/pending", authorize("admin"), controller.getPendingPayment
 router.patch("/payment/:id/approve", authorize("admin"), controller.approvePayment);
 router.patch("/payment/:id/reject", authorize("admin"), controller.rejectPayment);
 
+// Convenience: approve by body if :id is missing (handles Postman var issues)
+router.post("/payment/approve", authorize("admin"), (req, res, next) => {
+  if (req.body && req.body.id) {
+    req.params.id = req.body.id;
+    return controller.approvePayment(req, res, next);
+  }
+  return res.status(400).json({ success: false, message: "id is required in body" });
+});
+
 module.exports = router;

@@ -295,9 +295,9 @@ exports.getDriverTripHistory = asyncHandler(async (req, res) => {
       }
     }
 
-    const trips = await Trip.findAll({
+  const trips = await Trip.findAll({
       where: whereClause,
-      order: [['actual_dropoff_time', 'DESC'], ['createdAt', 'DESC']],
+    order: [['actual_dropoff_time', 'DESC'], ['createdAt', 'DESC']],
     });
 
     // Enrich trips with passenger information
