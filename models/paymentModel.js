@@ -12,7 +12,7 @@ const Payment = sequelize.define(
     },
     subscription_id: {
       type: DataTypes.UUID,
-      allowNull: false,
+      allowNull: true,
     },
     contract_id: {
       type: DataTypes.UUID,

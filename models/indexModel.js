@@ -33,20 +33,28 @@ Discount.hasMany(Contract, {
 Contract.hasMany(Payment, {
   foreignKey: "contract_id",
   as: "payments",
+  onDelete: "SET NULL",
+  onUpdate: "CASCADE",
 });
 Payment.belongsTo(Contract, {
   foreignKey: "contract_id",
   as: "contract",
+  onDelete: "SET NULL",
+  onUpdate: "CASCADE",
 });
 
 // Subscription ↔ Payment (1:N)
 Subscription.hasMany(Payment, {
   foreignKey: "subscription_id",
   as: "payments",
+  onDelete: "SET NULL",
+  onUpdate: "CASCADE",
 });
 Payment.belongsTo(Subscription, {
   foreignKey: "subscription_id",
   as: "subscription",
+  onDelete: "SET NULL",
+  onUpdate: "CASCADE",
 });
 
 // Contract ↔ Subscription (1:N)
