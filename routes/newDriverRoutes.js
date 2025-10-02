@@ -4,8 +4,9 @@ const controller = require("../controllers/newDriverController");
 const { authorize } = require("../middleware/auth");
 
 // Driver routes for assignments and schedule
-router.get("/:id/assignments", authorize("admin", "driver"), controller.getDriverAssignments);
+router.get("/:id/passengers", authorize("admin", "driver"), controller.getDriverPassengers);
 router.get("/:id/schedule", authorize("admin", "driver"), controller.getDriverSchedule);
+router.get("/:id/triphistory", authorize("admin", "driver"), controller.getDriverTripHistory);
 router.get("/:id/earnings", authorize("admin", "driver"), controller.getDriverEarnings);
 
 module.exports = router;

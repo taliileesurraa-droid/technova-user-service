@@ -48,6 +48,10 @@ const Contract = sequelize.define(
       type: DataTypes.ENUM("ACTIVE", "INACTIVE"),
       defaultValue: "ACTIVE",
     },
+    has_discount: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
     cost: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,

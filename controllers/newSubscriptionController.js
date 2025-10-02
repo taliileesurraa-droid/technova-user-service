@@ -3,6 +3,7 @@ const { asyncHandler } = require("../middleware/errorHandler");
 const { getPassengerById, getDriverById } = require("../utils/userService");
 const { calculateSubscriptionFare, getAvailableContracts } = require("../services/subscriptionService");
 const { createPaymentForSubscription } = require("./paymentController");
+const { getUserInfo, populateUserFields } = require("../utils/tokenHelper");
 
 // POST /subscription/create - Create subscription with fare estimation
 exports.createSubscription = asyncHandler(async (req, res) => {
@@ -42,6 +43,9 @@ exports.createSubscription = asyncHandler(async (req, res) => {
   const passengerId = req.user.id;
 
   try {
+    // Get passenger info from token
+    const passengerInfo = await getUserInfo(req, passengerId, 'passenger');
+
     // Calculate fare estimation
     const fareResult = await calculateSubscriptionFare(
       pickup_location,
@@ -57,10 +61,13 @@ exports.createSubscription = asyncHandler(async (req, res) => {
       return res.status(400).json(fareResult);
     }
 
-    // Create subscription with PENDING status
+    // Create subscription with PENDING status and passenger info
     const subscriptionData = {
       contract_id: contract_id,
       passenger_id: passengerId,
+      passenger_name: passengerInfo?.name || null,
+      passenger_phone: passengerInfo?.phone || null,
+      passenger_email: passengerInfo?.email || null,
       pickup_location,
       dropoff_location,
       pickup_latitude: pickup_latitude || null,
@@ -214,53 +221,61 @@ exports.getPassengerSubscriptions = asyncHandler(async (req, res) => {
       order: [['createdAt', 'DESC']],
     });
 
-    // Get passenger and driver information
-    const authHeader = req.headers && req.headers.authorization ? { headers: { Authorization: req.headers.authorization } } : {};
-    const uniqueDriverIds = [...new Set(subscriptions.map(s => s.driver_id).filter(Boolean))];
-    
-    const [passengerInfo, driverInfoMap] = await Promise.all([
-      getPassengerById(passengerId, authHeader).catch(() => null),
-      Promise.all(uniqueDriverIds.map(async (driverId) => {
-        try {
-          const info = await getDriverById(driverId, authHeader);
-          return [driverId, info];
-        } catch (_) { return [driverId, null]; }
-      })).then(results => new Map(results.filter(([,v]) => v)))
-    ]);
+    // Get passenger info from token
+    const passengerInfo = await getUserInfo(req, passengerId, 'passenger');
 
-    // Enrich subscriptions with user information
-    const enrichedSubscriptions = subscriptions.map(subscription => {
-      const subData = subscription.toJSON();
-      const driverInfo = driverInfoMap.get(subscription.driver_id);
-      
-      return {
-        ...subData,
-        passenger_name: passengerInfo?.name || null,
-        passenger_phone: passengerInfo?.phone || null,
-        passenger_email: passengerInfo?.email || null,
-        driver_name: driverInfo?.name || null,
-        driver_phone: driverInfo?.phone || null,
-        driver_email: driverInfo?.email || null,
-        vehicle_info: driverInfo ? {
-          car_model: driverInfo.carModel,
-          car_plate: driverInfo.carPlate,
-          car_color: driverInfo.carColor,
-        } : null,
-      };
-    });
+    // Enrich subscriptions with user information and expiration details
+    const enrichedSubscriptions = await Promise.all(
+      subscriptions.map(async (subscription) => {
+        const subData = subscription.toJSON();
+        let driverInfo = null;
+        
+        if (subscription.driver_id) {
+          driverInfo = await getUserInfo(req, subscription.driver_id, 'driver');
+        }
+        
+        const endDate = new Date(subscription.end_date);
+        const today = new Date();
+        const daysUntilExpiry = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+        
+        return {
+          ...subData,
+          passenger_name: passengerInfo?.name || subData.passenger_name || null,
+          passenger_phone: passengerInfo?.phone || subData.passenger_phone || null,
+          passenger_email: passengerInfo?.email || subData.passenger_email || null,
+          driver_name: driverInfo?.name || subData.driver_name || null,
+          driver_phone: driverInfo?.phone || subData.driver_phone || null,
+          driver_email: driverInfo?.email || subData.driver_email || null,
+          vehicle_info: driverInfo?.vehicle_info || subData.vehicle_info || null,
+          expiration_date: subscription.end_date,
+          days_until_expiry: daysUntilExpiry,
+          is_expired: daysUntilExpiry < 0,
+        };
+      })
+    );
 
     // Separate active and completed subscriptions
-    const activeSubscriptions = enrichedSubscriptions.filter(s => s.status === "ACTIVE");
-    const historySubscriptions = enrichedSubscriptions.filter(s => s.status !== "ACTIVE");
+    const activeSubscriptions = enrichedSubscriptions.filter(s => 
+      s.status === "ACTIVE" && !s.is_expired
+    );
+    const historySubscriptions = enrichedSubscriptions.filter(s => 
+      s.status !== "ACTIVE" || s.is_expired
+    );
 
     res.json({
       success: true,
       data: {
+        passenger_id: passengerId,
+        passenger_name: passengerInfo?.name || null,
+        passenger_phone: passengerInfo?.phone || null,
+        passenger_email: passengerInfo?.email || null,
         active_subscriptions: activeSubscriptions,
         subscription_history: historySubscriptions,
-        total_subscriptions: enrichedSubscriptions.length,
-        active_count: activeSubscriptions.length,
-        history_count: historySubscriptions.length,
+        counters: {
+          total_subscriptions: enrichedSubscriptions.length,
+          active_count: activeSubscriptions.length,
+          history_count: historySubscriptions.length,
+        }
       }
     });
   } catch (error) {
@@ -277,17 +292,22 @@ exports.getAvailableContracts = asyncHandler(async (req, res) => {
   const { contract_type } = req.query;
 
   try {
-    const contractsResult = await getAvailableContracts(contract_type);
-    
-    if (!contractsResult.success) {
-      return res.status(500).json(contractsResult);
+    let whereClause = { status: 'ACTIVE' };
+    if (contract_type) {
+      whereClause.contract_type = contract_type;
     }
+
+    const contracts = await Contract.findAll({
+      where: whereClause,
+      attributes: ['id', 'has_discount', 'contract_type', 'status'], // Only return required fields
+      order: [['contract_type', 'ASC'], ['createdAt', 'DESC']],
+    });
 
     res.json({
       success: true,
       data: {
-        contracts: contractsResult.data,
-        total_count: contractsResult.data.length,
+        contracts: contracts,
+        total_count: contracts.length,
         filter_applied: contract_type || null,
       }
     });

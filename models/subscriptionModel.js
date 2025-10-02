@@ -18,9 +18,37 @@ const Subscription = sequelize.define(
       type: DataTypes.UUID,
       allowNull: false,
     },
+    passenger_name: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    passenger_phone: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    passenger_email: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     driver_id: {
       type: DataTypes.UUID,
       allowNull: true, // Assigned later by admin
+    },
+    driver_name: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    driver_phone: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    driver_email: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    vehicle_info: {
+      type: DataTypes.JSON,
+      allowNull: true,
     },
     pickup_location: {
       type: DataTypes.STRING,

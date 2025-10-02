@@ -7,6 +7,7 @@ const { authorize } = require("../middleware/auth");
 router.post("/contract/settings", authorize("admin"), controller.setContractSettings);
 router.get("/contract/settings", authorize("admin"), controller.getContractSettings);
 router.post("/subscription/:id/assign-driver", authorize("admin"), controller.assignDriverToSubscription);
+router.patch("/subscription/:id/approve", authorize("admin"), controller.approveSubscription);
 router.get("/subscriptions", authorize("admin"), controller.getAllSubscriptions);
 
 // Payment approval

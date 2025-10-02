@@ -1,10 +1,11 @@
-const { Subscription } = require("../models/indexModel");
+const { Subscription, Trip } = require("../models/indexModel");
 const { asyncHandler } = require("../middleware/errorHandler");
 const { getPassengerById } = require("../utils/userService");
+const { getUserInfo } = require("../utils/tokenHelper");
 const { Op } = require("sequelize");
 
-// GET /driver/:id/assignments - Get driver's assigned subscriptions
-exports.getDriverAssignments = asyncHandler(async (req, res) => {
+// GET /driver/:id/passengers - Get driver's subscribed passengers with contract expiration and payment status
+exports.getDriverPassengers = asyncHandler(async (req, res) => {
   const driverId = req.params.id;
 
   // Check if user can access this driver's data
@@ -16,57 +17,69 @@ exports.getDriverAssignments = asyncHandler(async (req, res) => {
   }
 
   try {
-    const assignments = await Subscription.findAll({
+    const subscriptions = await Subscription.findAll({
       where: {
         driver_id: driverId,
         status: ["ACTIVE", "PENDING"]
       },
-      order: [['createdAt', 'DESC']],
+      order: [['end_date', 'ASC']],
     });
 
-    // Get passenger information for enrichment
-    const authHeader = req.headers && req.headers.authorization ? { headers: { Authorization: req.headers.authorization } } : {};
-    const uniquePassengerIds = [...new Set(assignments.map(s => s.passenger_id).filter(Boolean))];
-    
-    const passengerInfoMap = new Map();
-    await Promise.all(uniquePassengerIds.map(async (pid) => {
-      try {
-        const info = await getPassengerById(pid, authHeader);
-        if (info) passengerInfoMap.set(pid, info);
-      } catch (_) {}
-    }));
+    // Enrich with passenger information and expiration details
+    const enrichedPassengers = await Promise.all(
+      subscriptions.map(async (subscription) => {
+        const passengerInfo = await getUserInfo(req, subscription.passenger_id, 'passenger');
+        
+        const endDate = new Date(subscription.end_date);
+        const today = new Date();
+        const daysUntilExpiry = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+        
+        return {
+          subscription_id: subscription.id,
+          passenger_id: subscription.passenger_id,
+          passenger_name: passengerInfo?.name || subscription.passenger_name || null,
+          passenger_phone: passengerInfo?.phone || subscription.passenger_phone || null,
+          passenger_email: passengerInfo?.email || subscription.passenger_email || null,
+          contract_type: subscription.contract_type,
+          pickup_location: subscription.pickup_location,
+          dropoff_location: subscription.dropoff_location,
+          start_date: subscription.start_date,
+          end_date: subscription.end_date,
+          expiration_date: subscription.end_date,
+          days_until_expiry: daysUntilExpiry,
+          is_expired: daysUntilExpiry < 0,
+          payment_status: subscription.payment_status,
+          subscription_status: subscription.status,
+          fare: subscription.final_fare,
+        };
+      })
+    );
 
-    // Enrich assignments with passenger information
-    const enrichedAssignments = assignments.map(assignment => {
-      const assignmentData = assignment.toJSON();
-      const passengerInfo = passengerInfoMap.get(assignment.passenger_id);
-      
-      return {
-        ...assignmentData,
-        passenger_name: passengerInfo?.name || null,
-        passenger_phone: passengerInfo?.phone || null,
-        passenger_email: passengerInfo?.email || null,
-      };
-    });
-
-    // Separate by status
-    const activeAssignments = enrichedAssignments.filter(a => a.status === "ACTIVE");
-    const pendingAssignments = enrichedAssignments.filter(a => a.status === "PENDING");
+    // Separate by expiration status
+    const activePassengers = enrichedPassengers.filter(p => !p.is_expired && p.subscription_status === "ACTIVE");
+    const expiringPassengers = enrichedPassengers.filter(p => p.days_until_expiry <= 7 && p.days_until_expiry > 0);
+    const pendingPayment = enrichedPassengers.filter(p => p.payment_status === "PENDING");
 
     res.json({
       success: true,
       data: {
-        active_assignments: activeAssignments,
-        pending_assignments: pendingAssignments,
-        total_assignments: enrichedAssignments.length,
-        active_count: activeAssignments.length,
-        pending_count: pendingAssignments.length,
+        driver_id: driverId,
+        passengers: enrichedPassengers,
+        active_passengers: activePassengers,
+        expiring_soon: expiringPassengers,
+        pending_payment: pendingPayment,
+        counters: {
+          total_passengers: enrichedPassengers.length,
+          active_count: activePassengers.length,
+          expiring_count: expiringPassengers.length,
+          pending_payment_count: pendingPayment.length,
+        }
       }
     });
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: "Error fetching driver assignments",
+      message: "Error fetching driver passengers",
       error: error.message
     });
   }
@@ -112,30 +125,20 @@ exports.getDriverSchedule = asyncHandler(async (req, res) => {
       order: [['start_date', 'ASC'], ['createdAt', 'DESC']],
     });
 
-    // Get passenger information for enrichment
-    const authHeader = req.headers && req.headers.authorization ? { headers: { Authorization: req.headers.authorization } } : {};
-    const uniquePassengerIds = [...new Set(scheduleSubscriptions.map(s => s.passenger_id).filter(Boolean))];
-    
-    const passengerInfoMap = new Map();
-    await Promise.all(uniquePassengerIds.map(async (pid) => {
-      try {
-        const info = await getPassengerById(pid, authHeader);
-        if (info) passengerInfoMap.set(pid, info);
-      } catch (_) {}
-    }));
-
     // Enrich schedule with passenger information and organize by contract type
-    const enrichedSchedule = scheduleSubscriptions.map(subscription => {
-      const subData = subscription.toJSON();
-      const passengerInfo = passengerInfoMap.get(subscription.passenger_id);
-      
-      return {
-        ...subData,
-        passenger_name: passengerInfo?.name || null,
-        passenger_phone: passengerInfo?.phone || null,
-        passenger_email: passengerInfo?.email || null,
-      };
-    });
+    const enrichedSchedule = await Promise.all(
+      scheduleSubscriptions.map(async (subscription) => {
+        const subData = subscription.toJSON();
+        const passengerInfo = await getUserInfo(req, subscription.passenger_id, 'passenger');
+        
+        return {
+          ...subData,
+          passenger_name: passengerInfo?.name || subscription.passenger_name || null,
+          passenger_phone: passengerInfo?.phone || subscription.passenger_phone || null,
+          passenger_email: passengerInfo?.email || subscription.passenger_email || null,
+        };
+      })
+    );
 
     // Group by contract type for better organization
     const scheduleByType = enrichedSchedule.reduce((acc, subscription) => {
@@ -150,10 +153,9 @@ exports.getDriverSchedule = asyncHandler(async (req, res) => {
     // Calculate schedule statistics
     const stats = {
       total_active_subscriptions: enrichedSchedule.length,
-      daily_subscriptions: scheduleByType.DAILY?.length || 0,
-      weekly_subscriptions: scheduleByType.WEEKLY?.length || 0,
-      monthly_subscriptions: scheduleByType.MONTHLY?.length || 0,
-      yearly_subscriptions: scheduleByType.YEARLY?.length || 0,
+      individual_subscriptions: scheduleByType.INDIVIDUAL?.length || 0,
+      group_subscriptions: scheduleByType.GROUP?.length || 0,
+      institutional_subscriptions: scheduleByType.INSTITUTIONAL?.length || 0,
     };
 
     res.json({
@@ -248,6 +250,96 @@ exports.getDriverEarnings = asyncHandler(async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Error fetching driver earnings",
+      error: error.message
+    });
+  }
+});
+
+// GET /driver/:id/triphistory - Get driver's completed trips
+exports.getDriverTripHistory = asyncHandler(async (req, res) => {
+  const driverId = req.params.id;
+  const { start_date, end_date, status } = req.query;
+
+  // Check if user can access this driver's data
+  if (req.user.type === "driver" && req.user.id !== driverId) {
+    return res.status(403).json({
+      success: false,
+      message: "Access denied"
+    });
+  }
+
+  try {
+    let whereClause = {
+      driver_id: driverId,
+    };
+
+    // Filter by status if provided, default to completed trips
+    if (status) {
+      whereClause.status = status;
+    } else {
+      whereClause.status = ["COMPLETED", "CANCELLED"];
+    }
+
+    // Filter by date range if provided
+    if (start_date || end_date) {
+      whereClause.createdAt = {};
+      if (start_date) {
+        whereClause.createdAt[Op.gte] = new Date(start_date);
+      }
+      if (end_date) {
+        whereClause.createdAt[Op.lte] = new Date(end_date);
+      }
+    }
+
+    const trips = await Trip.findAll({
+      where: whereClause,
+      order: [['actual_dropoff_time', 'DESC'], ['createdAt', 'DESC']],
+    });
+
+    // Enrich trips with passenger information
+    const enrichedTrips = await Promise.all(
+      trips.map(async (trip) => {
+        const tripData = trip.toJSON();
+        const passengerInfo = await getUserInfo(req, trip.passenger_id, 'passenger');
+        
+        return {
+          ...tripData,
+          passenger_name: passengerInfo?.name || null,
+          passenger_phone: passengerInfo?.phone || null,
+          passenger_email: passengerInfo?.email || null,
+          trip_duration: trip.actual_dropoff_time && trip.actual_pickup_time ? 
+            Math.round((new Date(trip.actual_dropoff_time) - new Date(trip.actual_pickup_time)) / (1000 * 60)) : null, // in minutes
+        };
+      })
+    );
+
+    // Calculate statistics
+    const completedTrips = enrichedTrips.filter(t => t.status === "COMPLETED");
+    const cancelledTrips = enrichedTrips.filter(t => t.status === "CANCELLED");
+    const totalDistance = completedTrips.reduce((sum, trip) => sum + (parseFloat(trip.distance_km) || 0), 0);
+    const totalFare = completedTrips.reduce((sum, trip) => sum + (parseFloat(trip.fare_amount) || 0), 0);
+
+    res.json({
+      success: true,
+      data: {
+        driver_id: driverId,
+        trips: enrichedTrips,
+        statistics: {
+          total_trips: enrichedTrips.length,
+          completed_trips: completedTrips.length,
+          cancelled_trips: cancelledTrips.length,
+          total_distance_km: Math.round(totalDistance * 100) / 100,
+          total_fare: Math.round(totalFare * 100) / 100,
+          average_trip_distance: completedTrips.length > 0 ? Math.round((totalDistance / completedTrips.length) * 100) / 100 : 0,
+          average_fare_per_trip: completedTrips.length > 0 ? Math.round((totalFare / completedTrips.length) * 100) / 100 : 0,
+        },
+        filters_applied: { start_date, end_date, status }
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Error fetching driver trip history",
       error: error.message
     });
   }

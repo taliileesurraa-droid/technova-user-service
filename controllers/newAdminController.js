@@ -1,7 +1,8 @@
-const { ContractSettings, Subscription, Payment } = require("../models/indexModel");
+const { ContractSettings, Subscription, Payment, Trip } = require("../models/indexModel");
 const { asyncHandler } = require("../middleware/errorHandler");
 const { getDriverById, getPassengerById } = require("../utils/userService");
 const { approvePayment, rejectPayment, getPendingPayments } = require("./paymentController");
+const { getUserInfo } = require("../utils/tokenHelper");
 
 // POST /admin/contract/settings - Set contract base price per km and discounts
 exports.setContractSettings = asyncHandler(async (req, res) => {
@@ -201,53 +202,78 @@ exports.getAllSubscriptions = asyncHandler(async (req, res) => {
       order: [['createdAt', 'DESC']],
     });
 
-    // Get user information for enrichment
-    const authHeader = req.headers && req.headers.authorization ? { headers: { Authorization: req.headers.authorization } } : {};
-    const uniquePassengerIds = [...new Set(subscriptions.map(s => s.passenger_id).filter(Boolean))];
-    const uniqueDriverIds = [...new Set(subscriptions.map(s => s.driver_id).filter(Boolean))];
-    
-    const [passengerInfoMap, driverInfoMap] = await Promise.all([
-      Promise.all(uniquePassengerIds.map(async (pid) => {
-        try {
-          const info = await getPassengerById(pid, authHeader);
-          return [pid, info];
-        } catch (_) { return [pid, null]; }
-      })).then(results => new Map(results.filter(([,v]) => v))),
-      Promise.all(uniqueDriverIds.map(async (did) => {
-        try {
-          const info = await getDriverById(did, authHeader);
-          return [did, info];
-        } catch (_) { return [did, null]; }
-      })).then(results => new Map(results.filter(([,v]) => v)))
-    ]);
+    // Enrich subscriptions with user information and trip history
+    const enrichedSubscriptions = await Promise.all(
+      subscriptions.map(async (subscription) => {
+        const subData = subscription.toJSON();
+        
+        // Get user information from token
+        const passengerInfo = await getUserInfo(req, subscription.passenger_id, 'passenger');
+        let driverInfo = null;
+        if (subscription.driver_id) {
+          driverInfo = await getUserInfo(req, subscription.driver_id, 'driver');
+        }
 
-    // Enrich subscriptions with user information
-    const enrichedSubscriptions = subscriptions.map(subscription => {
-      const subData = subscription.toJSON();
-      const passengerInfo = passengerInfoMap.get(subscription.passenger_id);
-      const driverInfo = driverInfoMap.get(subscription.driver_id);
-      
-      return {
-        ...subData,
-        passenger_name: passengerInfo?.name || null,
-        passenger_phone: passengerInfo?.phone || null,
-        passenger_email: passengerInfo?.email || null,
-        driver_name: driverInfo?.name || null,
-        driver_phone: driverInfo?.phone || null,
-        driver_email: driverInfo?.email || null,
-        vehicle_info: driverInfo ? {
-          car_model: driverInfo.carModel,
-          car_plate: driverInfo.carPlate,
-          car_color: driverInfo.carColor,
-        } : null,
-      };
-    });
+        // Get trip history for this subscription
+        const trips = await Trip.findAll({
+          where: { subscription_id: subscription.id },
+          order: [['createdAt', 'DESC']],
+          limit: 5 // Last 5 trips
+        });
+
+        // Calculate expiration details
+        const endDate = new Date(subscription.end_date);
+        const today = new Date();
+        const daysUntilExpiry = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+        
+        return {
+          ...subData,
+          passenger_name: passengerInfo?.name || subData.passenger_name || null,
+          passenger_phone: passengerInfo?.phone || subData.passenger_phone || null,
+          passenger_email: passengerInfo?.email || subData.passenger_email || null,
+          driver_name: driverInfo?.name || subData.driver_name || null,
+          driver_phone: driverInfo?.phone || subData.driver_phone || null,
+          driver_email: driverInfo?.email || subData.driver_email || null,
+          vehicle_info: driverInfo?.vehicle_info || subData.vehicle_info || null,
+          expiration_date: subscription.end_date,
+          days_until_expiry: daysUntilExpiry,
+          is_expired: daysUntilExpiry < 0,
+          trip_history: trips.map(trip => ({
+            id: trip.id,
+            status: trip.status,
+            pickup_location: trip.pickup_location,
+            dropoff_location: trip.dropoff_location,
+            scheduled_pickup_time: trip.scheduled_pickup_time,
+            actual_pickup_time: trip.actual_pickup_time,
+            actual_dropoff_time: trip.actual_dropoff_time,
+            distance_km: trip.distance_km,
+            fare_amount: trip.fare_amount,
+            pickup_confirmed: trip.pickup_confirmed_by_passenger,
+            trip_ended: trip.trip_ended_by_passenger,
+          })),
+          trip_count: trips.length,
+        };
+      })
+    );
+
+    // Separate by status for better organization
+    const activeSubscriptions = enrichedSubscriptions.filter(s => s.status === "ACTIVE" && !s.is_expired);
+    const pendingSubscriptions = enrichedSubscriptions.filter(s => s.status === "PENDING");
+    const expiredSubscriptions = enrichedSubscriptions.filter(s => s.is_expired);
 
     res.json({
       success: true,
       data: {
         subscriptions: enrichedSubscriptions,
-        total_count: enrichedSubscriptions.length,
+        active_subscriptions: activeSubscriptions,
+        pending_subscriptions: pendingSubscriptions,
+        expired_subscriptions: expiredSubscriptions,
+        counters: {
+          total_count: enrichedSubscriptions.length,
+          active_count: activeSubscriptions.length,
+          pending_count: pendingSubscriptions.length,
+          expired_count: expiredSubscriptions.length,
+        },
         filters_applied: { status, payment_status, contract_type }
       }
     });
@@ -255,6 +281,86 @@ exports.getAllSubscriptions = asyncHandler(async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Error fetching subscriptions",
+      error: error.message
+    });
+  }
+});
+
+// PATCH /admin/subscription/:id/approve - Approve subscription and payment
+exports.approveSubscription = asyncHandler(async (req, res) => {
+  const subscriptionId = req.params.id;
+  const adminId = req.user.id;
+
+  try {
+    const subscription = await Subscription.findByPk(subscriptionId, {
+      include: [
+        {
+          model: Payment,
+          as: "payments",
+          where: { status: "PENDING" },
+          required: false
+        }
+      ]
+    });
+
+    if (!subscription) {
+      return res.status(404).json({
+        success: false,
+        message: "Subscription not found"
+      });
+    }
+
+    if (subscription.status !== "PENDING") {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot approve subscription with status: ${subscription.status}`
+      });
+    }
+
+    // Update subscription status
+    await Subscription.update({
+      status: "ACTIVE",
+      payment_status: "PAID"
+    }, {
+      where: { id: subscriptionId }
+    });
+
+    // Approve any pending payments for this subscription
+    if (subscription.payments && subscription.payments.length > 0) {
+      await Promise.all(
+        subscription.payments.map(payment => 
+          Payment.update({
+            admin_approved: true,
+            approved_by: adminId,
+            approved_at: new Date(),
+            status: "SUCCESS"
+          }, {
+            where: { id: payment.id }
+          })
+        )
+      );
+    }
+
+    // Get admin info for response
+    const adminInfo = await getUserInfo(req, adminId, 'admin');
+    const passengerInfo = await getUserInfo(req, subscription.passenger_id, 'passenger');
+
+    res.json({
+      success: true,
+      message: "Subscription and payment approved successfully",
+      data: {
+        subscription_id: subscriptionId,
+        approved_by: adminInfo?.name || adminId,
+        approved_at: new Date(),
+        passenger_name: passengerInfo?.name || null,
+        new_status: "ACTIVE",
+        payment_status: "PAID"
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Error approving subscription",
       error: error.message
     });
   }
