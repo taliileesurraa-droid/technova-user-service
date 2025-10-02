@@ -7,6 +7,10 @@ const Trip = sequelize.define("Trip", {
     defaultValue: DataTypes.UUIDV4,
     primaryKey: true,
   },
+  contract_id: {             // <-- add this column
+    type: DataTypes.UUID,
+    allowNull: true,         // must allow null for SET NULL to work
+  },
   subscription_id: {
     type: DataTypes.UUID,
     allowNull: false,

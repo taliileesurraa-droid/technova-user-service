@@ -24,70 +24,71 @@ Contract.belongsTo(Discount, {
   onDelete: "SET NULL",
   onUpdate: "CASCADE",
 });
-
 Discount.hasMany(Contract, {
   foreignKey: "discount_id",
-  as: "contracts",
+  as: "contractsWithDiscount",
 });
 
 // Contract ↔ Payment (1:N)
 Contract.hasMany(Payment, {
   foreignKey: "contract_id",
-  as: "payments",
+  as: "paymentsFromContract",
 });
 Payment.belongsTo(Contract, {
   foreignKey: "contract_id",
-  as: "contract",
+  as: "contractRef",
 });
 
 // Subscription ↔ Payment (1:N)
 Subscription.hasMany(Payment, {
   foreignKey: "subscription_id",
-  as: "payments",
+  as: "paymentsFromSubscription",
 });
 Payment.belongsTo(Subscription, {
   foreignKey: "subscription_id",
-  as: "subscription",
+  as: "subscriptionRef",
 });
 
 // Contract ↔ Subscription (1:N)
 Contract.hasMany(Subscription, {
   foreignKey: "contract_id",
-  as: "subscriptions",
+  as: "subscriptionsFromContract",
 });
 Subscription.belongsTo(Contract, {
   foreignKey: "contract_id",
-  as: "contract",
+  as: "contractRefForSubscription",
 });
 
 // Contract ↔ RideSchedule (1:N)
 Contract.hasMany(RideSchedule, {
   foreignKey: "contract_id",
-  as: "ride_schedules",
+  as: "rideSchedulesFromContract",
 });
 RideSchedule.belongsTo(Contract, {
   foreignKey: "contract_id",
-  as: "contract",
+  as: "contractRefForRideSchedule",
 });
 
 // Trip ↔ Contract (N:1)
 Trip.belongsTo(Contract, {
   foreignKey: "contract_id",
-  as: "contract",
+  onDelete: "RESTRICT",  // or "CASCADE" if you want to delete trips with contract
+  onUpdate: "CASCADE",
 });
+
 Contract.hasMany(Trip, {
   foreignKey: "contract_id",
-  as: "trips",
+  as: "tripsFromContract",
 });
 
 // Trip ↔ Subscription (N:1)
 Trip.belongsTo(Subscription, {
   foreignKey: "subscription_id",
-  as: "subscription",
+  as: "subscriptionRefForTrip",
 });
 Subscription.hasMany(Trip, {
   foreignKey: "subscription_id",
-  as: "trips",
+  as: "tripsFromSubscription",
 });
 
 // Trip ↔ TripSchedule (1:1)
@@ -97,7 +98,7 @@ Trip.hasOne(TripSchedule, {
 });
 TripSchedule.belongsTo(Trip, {
   foreignKey: "trip_id",
-  as: "trip",
+  as: "tripRefForSchedule",
 });
 
 // Payment ↔ Passenger (external reference → user service)
@@ -113,7 +114,6 @@ TripSchedule.belongsTo(Trip, {
  * ========================
 **/
 
-// ✅ Database Sync Function
 const syncDB = async () => {
   try {
     await sequelize.authenticate();
@@ -154,7 +154,7 @@ const syncDB = async () => {
   }
 };
 
-// ✅ Export models and sync function
+// Export models and sync function
 module.exports = {
   sequelize,
   Discount,
