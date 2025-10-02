@@ -2,6 +2,114 @@ const { Trip, Subscription, Contract, TripSchedule } = require("../models/indexM
 const { asyncHandler } = require("../middleware/errorHandler");
 const { getUserInfo } = require("../utils/tokenHelper");
 
+// POST /trip/pickup - Create trip at pickup and return trip_id
+exports.createTripOnPickup = asyncHandler(async (req, res) => {
+  const { notes } = req.body || {};
+
+  try {
+    // Determine passenger context: if admin provided passenger_id, use it; else use authenticated passenger
+    const isAdmin = req.user && req.user.type === "admin";
+    const passengerId = isAdmin ? (req.body && req.body.passenger_id) : req.user.id;
+
+    if (!passengerId) {
+      return res.status(400).json({ success: false, message: "Missing passenger_id for trip creation at pickup" });
+    }
+
+    // Find active subscription for passenger with assigned driver
+    const activeSubscription = await Subscription.findOne({
+      where: {
+        passenger_id: passengerId,
+        status: "ACTIVE"
+      },
+      order: [["createdAt", "DESC"]]
+    });
+
+    if (!activeSubscription) {
+      return res.status(404).json({ success: false, message: "No active subscription found for passenger" });
+    }
+
+    // Require a driver to be assigned somewhere in workflow; fallback to subscription.driver_id if present
+    const assignedDriverId = activeSubscription.driver_id;
+    if (!assignedDriverId) {
+      return res.status(409).json({ success: false, message: "No driver assigned to active subscription" });
+    }
+
+    // Create trip using subscription details
+    const trip = await Trip.create({
+      subscription_id: activeSubscription.id,
+      passenger_id: activeSubscription.passenger_id,
+      driver_id: assignedDriverId,
+      pickup_location: activeSubscription.pickup_location,
+      dropoff_location: activeSubscription.dropoff_location,
+      pickup_latitude: activeSubscription.pickup_latitude,
+      pickup_longitude: activeSubscription.pickup_longitude,
+      dropoff_latitude: activeSubscription.dropoff_latitude,
+      dropoff_longitude: activeSubscription.dropoff_longitude,
+      fare_amount: activeSubscription.final_fare,
+      distance_km: activeSubscription.distance_km,
+      notes
+    });
+
+    // Immediately mark pickup as confirmed by passenger at creation time
+    await Trip.update({
+      pickup_confirmed_by_passenger: true,
+      actual_pickup_time: new Date(),
+      // Note: status transitions vary in codebase; keep existing behavior compatible
+      status: "PICKUP_CONFIRMED"
+    }, { where: { id: trip.id } });
+
+    const updatedTrip = await Trip.findByPk(trip.id);
+    const passengerInfo = await getUserInfo(req, passengerId, 'passenger');
+    const driverInfo = await getUserInfo(req, assignedDriverId, 'driver');
+
+    return res.status(201).json({
+      success: true,
+      message: "Trip created at pickup and pickup confirmed",
+      data: {
+        trip_id: updatedTrip.id,
+        trip: {
+          ...updatedTrip.toJSON(),
+          passenger_name: passengerInfo?.name || null,
+          passenger_phone: passengerInfo?.phone || null,
+          passenger_email: passengerInfo?.email || null,
+          driver_name: driverInfo?.name || null,
+          driver_phone: driverInfo?.phone || null,
+          vehicle_info: driverInfo?.vehicle_info || null
+        },
+        confirmed_at: updatedTrip.actual_pickup_time,
+        confirmed_by: passengerInfo?.name || passengerId,
+        links: {
+          self: `/trip/${updatedTrip.id}`,
+          dropoff: `/trip/${updatedTrip.id}/dropoff`
+        }
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Error creating trip at pickup", error: error.message });
+  }
+});
+
+// GET /trip - List trips according to role
+exports.listTrips = asyncHandler(async (req, res) => {
+  try {
+    const whereClause = {};
+    const { status } = req.query || {};
+
+    if (status) whereClause.status = status;
+
+    if (req.user.type === "passenger") {
+      whereClause.passenger_id = req.user.id;
+    } else if (req.user.type === "driver") {
+      whereClause.driver_id = req.user.id;
+    }
+
+    const trips = await Trip.findAll({ where: whereClause, order: [["createdAt", "DESC"]] });
+
+    return res.json({ success: true, data: { trips } });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Error listing trips", error: error.message });
+  }
+});
 // PATCH /trip/:id/pickup - Confirm pickup by passenger
 exports.confirmPickup = asyncHandler(async (req, res) => {
   const tripId = req.params.id;

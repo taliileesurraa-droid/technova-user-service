@@ -4,6 +4,8 @@ const controller = require("../controllers/tripController");
 const { authorize } = require("../middleware/auth");
 
 // Trip management routes
+router.get("/", authorize("admin", "driver", "passenger"), controller.listTrips);
+router.post("/pickup", authorize("admin", "passenger"), controller.createTripOnPickup);
 router.post("/", authorize("admin"), controller.createTrip);
 router.get("/:id", authorize("admin", "driver", "passenger"), controller.getTripDetails);
 router.patch("/:id/start", authorize("admin", "driver"), controller.startTrip);
