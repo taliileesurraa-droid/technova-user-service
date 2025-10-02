@@ -498,7 +498,7 @@
 								}
 							],
 							"cookie": [],
-							"body": "{\n  \"success\": true,\n  \"message\": \"Pickup confirmed successfully\",\n  \"data\": {\n    \"trip\": {\n      \"id\": \"trip-uuid-123\",\n      \"status\": \"PICKUP_CONFIRMED\",\n      \"actual_pickup_time\": \"2024-01-15T08:30:00.000Z\",\n      \"pickup_confirmed_by_passenger\": true,\n      \"passenger_name\": \"John Doe\",\n      \"driver_name\": \"Ahmed Ali\",\n      \"vehicle_info\": {\n        \"model\": \"Toyota Corolla\",\n        \"plate\": \"AA-123-456\"\n      }\n    },\n    \"confirmed_at\": \"2024-01-15T08:30:00.000Z\",\n    \"confirmed_by\": \"John Doe\"\n  }\n}"
+                            "body": "{\n  \"success\": true,\n  \"message\": \"Pickup confirmed successfully\",\n  \"data\": {\n    \"trip_id\": \"trip-uuid-123\",\n    \"trip\": {\n      \"id\": \"trip-uuid-123\",\n      \"status\": \"PICKUP_CONFIRMED\",\n      \"actual_pickup_time\": \"2024-01-15T08:30:00.000Z\",\n      \"pickup_confirmed_by_passenger\": true,\n      \"passenger_name\": \"John Doe\",\n      \"driver_name\": \"Ahmed Ali\",\n      \"vehicle_info\": {\n        \"model\": \"Toyota Corolla\",\n        \"plate\": \"AA-123-456\"\n      }\n    },\n    \"confirmed_at\": \"2024-01-15T08:30:00.000Z\",\n    \"confirmed_by\": \"John Doe\",\n    \"links\": {\n      \"self\": \"/trip/trip-uuid-123\",\n      \"dropoff\": \"/trip/trip-uuid-123/dropoff\"\n    }\n  }\n}"
 						}
 					]
 				},
@@ -561,7 +561,7 @@
 								}
 							],
 							"cookie": [],
-							"body": "{\n  \"success\": true,\n  \"message\": \"Trip completed successfully\",\n  \"data\": {\n    \"trip\": {\n      \"id\": \"trip-uuid-123\",\n      \"status\": \"COMPLETED\",\n      \"actual_pickup_time\": \"2024-01-15T08:30:00.000Z\",\n      \"actual_dropoff_time\": \"2024-01-15T09:15:00.000Z\",\n      \"trip_duration_minutes\": 45,\n      \"trip_ended_by_passenger\": true,\n      \"rating\": 5,\n      \"passenger_name\": \"John Doe\",\n      \"driver_name\": \"Ahmed Ali\"\n    },\n    \"completed_at\": \"2024-01-15T09:15:00.000Z\",\n    \"trip_summary\": {\n      \"pickup_time\": \"2024-01-15T08:30:00.000Z\",\n      \"dropoff_time\": \"2024-01-15T09:15:00.000Z\",\n      \"duration_minutes\": 45,\n      \"distance_km\": 6.25,\n      \"fare_amount\": 156.25,\n      \"rating\": 5\n    }\n  }\n}"
+                            "body": "{\n  \"success\": true,\n  \"message\": \"Trip completed successfully\",\n  \"data\": {\n    \"trip\": {\n      \"id\": \"trip-uuid-123\",\n      \"status\": \"COMPLETED\",\n      \"actual_pickup_time\": \"2024-01-15T08:30:00.000Z\",\n      \"actual_dropoff_time\": \"2024-01-15T09:15:00.000Z\",\n      \"trip_duration_minutes\": 45,\n      \"trip_ended_by_passenger\": true,\n      \"rating\": 5,\n      \"passenger_name\": \"John Doe\",\n      \"driver_name\": \"Ahmed Ali\"\n    },\n    \"completed_at\": \"2024-01-15T09:15:00.000Z\",\n    \"completed_by\": \"John Doe\",\n    \"trip_summary\": {\n      \"pickup_time\": \"2024-01-15T08:30:00.000Z\",\n      \"dropoff_time\": \"2024-01-15T09:15:00.000Z\",\n      \"duration_minutes\": 45,\n      \"distance_km\": 6.25,\n      \"fare_amount\": 156.25,\n      \"rating\": 5\n    }\n  }\n}"
 						}
 					]
 				}
