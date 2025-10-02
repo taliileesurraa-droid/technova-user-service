@@ -7,6 +7,7 @@ const Payment = require("./paymentModel");
 const Subscription = require("./subscriptionModel");
 const RideSchedule = require("./rideScheduleModel");
 const Trip = require("./tripModel");
+const TripSchedule = require("./tripScheduleModel");
 const Pricing = require("./pricingModel");
 const ContractSettings = require("./contractSettingsModel");
 
@@ -89,6 +90,16 @@ Subscription.hasMany(Trip, {
   as: "trips",
 });
 
+// Trip ↔ TripSchedule (1:1)
+Trip.hasOne(TripSchedule, {
+  foreignKey: "trip_id",
+  as: "schedule",
+});
+TripSchedule.belongsTo(Trip, {
+  foreignKey: "trip_id",
+  as: "trip",
+});
+
 // Payment ↔ Passenger (external reference → user service)
 // Subscription ↔ Passenger (external reference → user service)
 // RideSchedule ↔ Driver (external reference → driver service)
@@ -127,6 +138,9 @@ const syncDB = async () => {
     await Trip.sync({ alter: true });
     console.log("✅ Trip table synced successfully!");
 
+    await TripSchedule.sync({ alter: true });
+    console.log("✅ TripSchedule table synced successfully!");
+
     await Pricing.sync({ alter: true });
     console.log("✅ Pricing table synced successfully!");
 
@@ -149,6 +163,7 @@ module.exports = {
   Subscription,
   RideSchedule,
   Trip,
+  TripSchedule,
   Pricing,
   ContractSettings,
   syncDB,

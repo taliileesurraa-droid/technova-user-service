@@ -9,6 +9,7 @@ router.get("/contract/settings", authorize("admin"), controller.getContractSetti
 router.post("/subscription/:id/assign-driver", authorize("admin"), controller.assignDriverToSubscription);
 router.patch("/subscription/:id/approve", authorize("admin"), controller.approveSubscription);
 router.get("/subscriptions", authorize("admin"), controller.getAllSubscriptions);
+router.get("/trips", authorize("admin"), controller.getAllTrips);
 
 // Payment approval
 router.get("/payments/pending", authorize("admin"), controller.getPendingPayments);

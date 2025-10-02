@@ -1,4 +1,4 @@
-const { Trip, Subscription } = require("../models/indexModel");
+const { Trip, Subscription, Contract, TripSchedule } = require("../models/indexModel");
 const { asyncHandler } = require("../middleware/errorHandler");
 const { getUserInfo } = require("../utils/tokenHelper");
 
@@ -286,6 +286,265 @@ exports.getAssignedDriver = asyncHandler(async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Error fetching assigned driver information",
+      error: error.message
+    });
+  }
+});
+
+// POST /trip - Create a new trip
+exports.createTrip = asyncHandler(async (req, res) => {
+  const {
+    subscription_id,
+    driver_id,
+    pickup_location,
+    dropoff_location,
+    pickup_latitude,
+    pickup_longitude,
+    dropoff_latitude,
+    dropoff_longitude,
+    fare_amount,
+    distance_km,
+    scheduled_time,
+    notes
+  } = req.body;
+
+  if (!subscription_id || !driver_id || !pickup_location || !dropoff_location) {
+    return res.status(400).json({
+      success: false,
+      message: "Missing required fields: subscription_id, driver_id, pickup_location, dropoff_location"
+    });
+  }
+
+  try {
+    // Get subscription details
+    const subscription = await Subscription.findByPk(subscription_id);
+    if (!subscription) {
+      return res.status(404).json({
+        success: false,
+        message: "Subscription not found"
+      });
+    }
+
+    // Create the trip
+    const trip = await Trip.create({
+      subscription_id,
+      passenger_id: subscription.passenger_id,
+      driver_id,
+      pickup_location,
+      dropoff_location,
+      pickup_latitude,
+      pickup_longitude,
+      dropoff_latitude,
+      dropoff_longitude,
+      fare_amount: fare_amount || subscription.final_fare,
+      distance_km: distance_km || subscription.distance_km,
+      status: "SCHEDULED",
+      notes
+    });
+
+    // Create trip schedule if scheduled_time is provided
+    let tripSchedule = null;
+    if (scheduled_time) {
+      tripSchedule = await TripSchedule.create({
+        trip_id: trip.id,
+        scheduled_time: new Date(scheduled_time),
+        notified: false
+      });
+    }
+
+    // Get user info for response
+    const passengerInfo = await getUserInfo(req, subscription.passenger_id, 'passenger');
+    const driverInfo = await getUserInfo(req, driver_id, 'driver');
+
+    res.status(201).json({
+      success: true,
+      message: "Trip created successfully",
+      data: {
+        trip: {
+          ...trip.toJSON(),
+          passenger_name: passengerInfo?.name,
+          passenger_phone: passengerInfo?.phone,
+          driver_name: driverInfo?.name,
+          driver_phone: driverInfo?.phone,
+          vehicle_info: driverInfo?.vehicle_info,
+          schedule: tripSchedule?.toJSON() || null
+        }
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Error creating trip",
+      error: error.message
+    });
+  }
+});
+
+// PATCH /trip/:id/start - Start a trip
+exports.startTrip = asyncHandler(async (req, res) => {
+  const tripId = req.params.id;
+  const { notes } = req.body;
+
+  try {
+    const trip = await Trip.findByPk(tripId, {
+      include: [
+        { model: Subscription, as: "subscription" },
+        { model: TripSchedule, as: "schedule" }
+      ]
+    });
+
+    if (!trip) {
+      return res.status(404).json({
+        success: false,
+        message: "Trip not found"
+      });
+    }
+
+    // Check authorization
+    if (req.user.type === "driver" && String(req.user.id) !== String(trip.driver_id)) {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied - only assigned driver can start this trip"
+      });
+    }
+
+    if (trip.status !== "SCHEDULED") {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot start trip with status: ${trip.status}`
+      });
+    }
+
+    // Update trip status
+    await trip.update({
+      status: "ONGOING",
+      started_at: new Date(),
+      notes: notes || trip.notes
+    });
+
+    // Get user info for response
+    const passengerInfo = await getUserInfo(req, trip.passenger_id, 'passenger');
+    const driverInfo = await getUserInfo(req, trip.driver_id, 'driver');
+
+    res.json({
+      success: true,
+      message: "Trip started successfully",
+      data: {
+        trip: {
+          ...trip.toJSON(),
+          status: "ONGOING",
+          started_at: new Date(),
+          passenger_name: passengerInfo?.name,
+          passenger_phone: passengerInfo?.phone,
+          driver_name: driverInfo?.name,
+          driver_phone: driverInfo?.phone,
+          vehicle_info: driverInfo?.vehicle_info
+        },
+        started_at: new Date(),
+        started_by: driverInfo?.name || `Driver ${trip.driver_id.slice(-4)}`
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Error starting trip",
+      error: error.message
+    });
+  }
+});
+
+// PATCH /trip/:id/complete - Complete a trip
+exports.completeTrip = asyncHandler(async (req, res) => {
+  const tripId = req.params.id;
+  const { notes, rating } = req.body;
+
+  try {
+    const trip = await Trip.findByPk(tripId, {
+      include: [
+        { model: Subscription, as: "subscription" },
+        { model: TripSchedule, as: "schedule" }
+      ]
+    });
+
+    if (!trip) {
+      return res.status(404).json({
+        success: false,
+        message: "Trip not found"
+      });
+    }
+
+    // Check authorization - both driver and passenger can complete
+    if (req.user.type === "driver" && String(req.user.id) !== String(trip.driver_id)) {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied - only assigned driver can complete this trip"
+      });
+    }
+    if (req.user.type === "passenger" && String(req.user.id) !== String(trip.passenger_id)) {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied - only assigned passenger can complete this trip"
+      });
+    }
+
+    if (trip.status !== "ONGOING") {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot complete trip with status: ${trip.status}`
+      });
+    }
+
+    // Calculate trip duration
+    const completedAt = new Date();
+    let durationMinutes = null;
+    if (trip.started_at) {
+      durationMinutes = Math.round((completedAt - new Date(trip.started_at)) / (1000 * 60));
+    }
+
+    // Update trip status
+    await trip.update({
+      status: "COMPLETED",
+      completed_at: completedAt,
+      notes: notes || trip.notes,
+      rating: rating || trip.rating,
+      trip_ended_by_passenger: req.user.type === "passenger"
+    });
+
+    // Get user info for response
+    const passengerInfo = await getUserInfo(req, trip.passenger_id, 'passenger');
+    const driverInfo = await getUserInfo(req, trip.driver_id, 'driver');
+
+    res.json({
+      success: true,
+      message: "Trip completed successfully",
+      data: {
+        trip: {
+          ...trip.toJSON(),
+          status: "COMPLETED",
+          completed_at: completedAt,
+          trip_duration_minutes: durationMinutes,
+          passenger_name: passengerInfo?.name,
+          passenger_phone: passengerInfo?.phone,
+          driver_name: driverInfo?.name,
+          driver_phone: driverInfo?.phone,
+          vehicle_info: driverInfo?.vehicle_info
+        },
+        completed_at: completedAt,
+        completed_by: req.user.type === "passenger" ? passengerInfo?.name : driverInfo?.name,
+        trip_summary: {
+          started_at: trip.started_at,
+          completed_at: completedAt,
+          duration_minutes: durationMinutes,
+          distance_km: trip.distance_km,
+          fare_amount: trip.fare_amount,
+          rating: rating || trip.rating
+        }
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Error completing trip",
       error: error.message
     });
   }

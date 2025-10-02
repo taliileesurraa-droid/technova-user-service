@@ -7,10 +7,6 @@ const Trip = sequelize.define("Trip", {
     defaultValue: DataTypes.UUIDV4,
     primaryKey: true,
   },
-  contract_id: {
-    type: DataTypes.UUID,
-    allowNull: false,
-  },
   subscription_id: {
     type: DataTypes.UUID,
     allowNull: false,
@@ -56,18 +52,14 @@ const Trip = sequelize.define("Trip", {
     allowNull: true,
   },
   status: {
-    type: DataTypes.ENUM("SCHEDULED", "PICKUP_CONFIRMED", "IN_PROGRESS", "COMPLETED", "CANCELLED"),
+    type: DataTypes.ENUM("SCHEDULED", "ONGOING", "COMPLETED", "CANCELLED"),
     defaultValue: "SCHEDULED",
   },
-  scheduled_pickup_time: {
+  started_at: {
     type: DataTypes.DATE,
     allowNull: true,
   },
-  actual_pickup_time: {
-    type: DataTypes.DATE,
-    allowNull: true,
-  },
-  actual_dropoff_time: {
+  completed_at: {
     type: DataTypes.DATE,
     allowNull: true,
   },
@@ -82,6 +74,14 @@ const Trip = sequelize.define("Trip", {
   notes: {
     type: DataTypes.TEXT,
     allowNull: true,
+  },
+  rating: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    validate: {
+      min: 1,
+      max: 5
+    }
   },
 }, {
   tableName: "trips",

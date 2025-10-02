@@ -734,6 +734,69 @@
 							"body": "{\n  \"success\": true,\n  \"data\": {\n    \"driver_id\": \"driver-uuid-456\",\n    \"trips\": [\n      {\n        \"id\": \"trip-uuid-1\",\n        \"status\": \"COMPLETED\",\n        \"pickup_location\": \"Bole Airport\",\n        \"dropoff_location\": \"University\",\n        \"actual_pickup_time\": \"2024-01-15T08:30:00.000Z\",\n        \"actual_dropoff_time\": \"2024-01-15T09:15:00.000Z\",\n        \"distance_km\": 6.25,\n        \"fare_amount\": 156.25,\n        \"passenger_name\": \"John Doe\",\n        \"trip_duration\": 45\n      }\n    ],\n    \"statistics\": {\n      \"total_trips\": 25,\n      \"completed_trips\": 23,\n      \"cancelled_trips\": 2,\n      \"total_distance_km\": 156.25,\n      \"total_fare\": 3906.25,\n      \"average_trip_distance\": 6.79,\n      \"average_fare_per_trip\": 169.84\n    }\n  }\n}"
 						}
 					]
+				},
+				{
+					"name": "Send Trip Notification",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{driverToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"notification_type\": \"ARRIVAL\",\n  \"message\": \"I'm arriving at the pickup location in 5 minutes\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/driver/{{driverId}}/trip/{{tripId}}/notify",
+							"host": ["{{baseUrl}}"],
+							"path": ["driver", "{{driverId}}", "trip", "{{tripId}}", "notify"]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{driverToken}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"notification_type\": \"ARRIVAL\",\n  \"message\": \"I'm arriving at the pickup location in 5 minutes\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/driver/driver-uuid-456/trip/trip-uuid-123/notify",
+									"host": ["{{baseUrl}}"],
+									"path": ["driver", "driver-uuid-456", "trip", "trip-uuid-123", "notify"]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"success\": true,\n  \"message\": \"Notification sent successfully to passenger\",\n  \"data\": {\n    \"trip_id\": \"trip-uuid-123\",\n    \"driver_id\": \"driver-uuid-456\",\n    \"passenger_id\": \"passenger-uuid-123\",\n    \"passenger_name\": \"John Doe\",\n    \"passenger_phone\": \"+251911234567\",\n    \"notification\": {\n      \"type\": \"ARRIVAL\",\n      \"message\": \"I'm arriving at the pickup location in 5 minutes\",\n      \"sent_at\": \"2024-01-15T08:25:00.000Z\",\n      \"delivery_status\": \"SENT\"\n    },\n    \"trip_details\": {\n      \"pickup_location\": \"Bole Airport\",\n      \"dropoff_location\": \"University\",\n      \"status\": \"SCHEDULED\",\n      \"scheduled_time\": \"2024-01-15T08:30:00.000Z\"\n    }\n  }\n}"
+						}
+					]
 				}
 			]
 		},
@@ -1095,12 +1158,280 @@
 							"body": "{\n  \"success\": true,\n  \"message\": \"Payment rejected\",\n  \"data\": {\n    \"payment_id\": \"payment-uuid-1\",\n    \"rejected_by\": \"Admin Name\",\n    \"rejected_at\": \"2024-01-15T10:30:00.000Z\",\n    \"rejection_reason\": \"Invalid transaction reference\",\n    \"subscription_status\": \"PENDING\"\n  }\n}"
 						}
 					]
+				},
+				{
+					"name": "Get All Trips",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/trips?status=ONGOING&start_date=2024-01-01&end_date=2024-01-31",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "trips"],
+							"query": [
+								{
+									"key": "status",
+									"value": "ONGOING"
+								},
+								{
+									"key": "start_date",
+									"value": "2024-01-01"
+								},
+								{
+									"key": "end_date",
+									"value": "2024-01-31"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{authToken}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/admin/trips",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "trips"]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"success\": true,\n  \"data\": {\n    \"trips\": [\n      {\n        \"id\": \"trip-uuid-1\",\n        \"subscription_id\": \"sub-uuid-1\",\n        \"passenger_id\": \"passenger-uuid-1\",\n        \"driver_id\": \"driver-uuid-1\",\n        \"status\": \"ONGOING\",\n        \"started_at\": \"2024-01-15T08:30:00.000Z\",\n        \"passenger_name\": \"John Doe\",\n        \"passenger_phone\": \"+251911234567\",\n        \"driver_name\": \"Ahmed Ali\",\n        \"driver_phone\": \"+251911234568\",\n        \"vehicle_info\": {\n          \"model\": \"Toyota Corolla\",\n          \"plate\": \"AA-123-456\"\n        },\n        \"is_scheduled\": true,\n        \"notification_sent\": true\n      }\n    ],\n    \"scheduled_trips\": [],\n    \"ongoing_trips\": [],\n    \"completed_trips\": [],\n    \"cancelled_trips\": [],\n    \"statistics\": {\n      \"total_trips\": 25,\n      \"scheduled_count\": 5,\n      \"ongoing_count\": 3,\n      \"completed_count\": 15,\n      \"cancelled_count\": 2,\n      \"total_distance_km\": 156.25,\n      \"total_fare\": 3906.25,\n      \"average_trip_distance\": 10.42,\n      \"average_fare_per_trip\": 260.42\n    }\n  }\n}"
+						}
+					]
 				}
 			]
 		},
 		{
 			"name": "🚛 Trip Management",
 			"item": [
+				{
+					"name": "Create Trip",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Trip created successfully\", function() {",
+									"    pm.response.to.have.status(201);",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"    if (jsonData.data.trip) {",
+									"        pm.collectionVariables.set(\"tripId\", jsonData.data.trip.id);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"subscription_id\": \"{{subscriptionId}}\",\n  \"driver_id\": \"{{driverId}}\",\n  \"pickup_location\": \"Bole International Airport\",\n  \"dropoff_location\": \"Addis Ababa University\",\n  \"pickup_latitude\": 8.9806,\n  \"pickup_longitude\": 38.7578,\n  \"dropoff_latitude\": 9.0365,\n  \"dropoff_longitude\": 38.7578,\n  \"fare_amount\": 156.25,\n  \"distance_km\": 6.25,\n  \"scheduled_time\": \"2024-01-15T08:30:00.000Z\",\n  \"notes\": \"Regular morning pickup\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/trip",
+							"host": ["{{baseUrl}}"],
+							"path": ["trip"]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{authToken}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"subscription_id\": \"sub-uuid-123\",\n  \"driver_id\": \"driver-uuid-456\",\n  \"pickup_location\": \"Bole International Airport\",\n  \"dropoff_location\": \"Addis Ababa University\",\n  \"scheduled_time\": \"2024-01-15T08:30:00.000Z\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/trip",
+									"host": ["{{baseUrl}}"],
+									"path": ["trip"]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"success\": true,\n  \"message\": \"Trip created successfully\",\n  \"data\": {\n    \"trip\": {\n      \"id\": \"trip-uuid-123\",\n      \"subscription_id\": \"sub-uuid-1\",\n      \"passenger_id\": \"passenger-uuid-123\",\n      \"driver_id\": \"driver-uuid-456\",\n      \"pickup_location\": \"Bole International Airport\",\n      \"dropoff_location\": \"Addis Ababa University\",\n      \"status\": \"SCHEDULED\",\n      \"passenger_name\": \"John Doe\",\n      \"passenger_phone\": \"+251911234567\",\n      \"driver_name\": \"Ahmed Ali\",\n      \"driver_phone\": \"+251911234568\",\n      \"vehicle_info\": {\n        \"model\": \"Toyota Corolla\",\n        \"plate\": \"AA-123-456\"\n      },\n      \"schedule\": {\n        \"id\": \"schedule-uuid-123\",\n        \"scheduled_time\": \"2024-01-15T08:30:00.000Z\",\n        \"notified\": false\n      }\n    }\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Start Trip",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{driverToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"notes\": \"Trip started, passenger picked up\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/trip/{{tripId}}/start",
+							"host": ["{{baseUrl}}"],
+							"path": ["trip", "{{tripId}}", "start"]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{driverToken}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"notes\": \"Trip started, passenger picked up\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/trip/trip-uuid-123/start",
+									"host": ["{{baseUrl}}"],
+									"path": ["trip", "trip-uuid-123", "start"]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"success\": true,\n  \"message\": \"Trip started successfully\",\n  \"data\": {\n    \"trip\": {\n      \"id\": \"trip-uuid-123\",\n      \"status\": \"ONGOING\",\n      \"started_at\": \"2024-01-15T08:30:00.000Z\",\n      \"passenger_name\": \"John Doe\",\n      \"driver_name\": \"Ahmed Ali\",\n      \"vehicle_info\": {\n        \"model\": \"Toyota Corolla\",\n        \"plate\": \"AA-123-456\"\n      }\n    },\n    \"started_at\": \"2024-01-15T08:30:00.000Z\",\n    \"started_by\": \"Ahmed Ali\"\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Complete Trip",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{driverToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"notes\": \"Trip completed successfully\",\n  \"rating\": 5\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/trip/{{tripId}}/complete",
+							"host": ["{{baseUrl}}"],
+							"path": ["trip", "{{tripId}}", "complete"]
+						}
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{driverToken}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"notes\": \"Trip completed successfully\",\n  \"rating\": 5\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/trip/trip-uuid-123/complete",
+									"host": ["{{baseUrl}}"],
+									"path": ["trip", "trip-uuid-123", "complete"]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"success\": true,\n  \"message\": \"Trip completed successfully\",\n  \"data\": {\n    \"trip\": {\n      \"id\": \"trip-uuid-123\",\n      \"status\": \"COMPLETED\",\n      \"started_at\": \"2024-01-15T08:30:00.000Z\",\n      \"completed_at\": \"2024-01-15T09:15:00.000Z\",\n      \"trip_duration_minutes\": 45,\n      \"passenger_name\": \"John Doe\",\n      \"driver_name\": \"Ahmed Ali\"\n    },\n    \"completed_at\": \"2024-01-15T09:15:00.000Z\",\n    \"completed_by\": \"Ahmed Ali\",\n    \"trip_summary\": {\n      \"started_at\": \"2024-01-15T08:30:00.000Z\",\n      \"completed_at\": \"2024-01-15T09:15:00.000Z\",\n      \"duration_minutes\": 45,\n      \"distance_km\": 6.25,\n      \"fare_amount\": 156.25,\n      \"rating\": 5\n    }\n  }\n}"
+						}
+					]
+				},
 				{
 					"name": "Get Trip Details",
 					"request": {

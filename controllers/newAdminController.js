@@ -1,4 +1,4 @@
-const { ContractSettings, Subscription, Payment, Trip } = require("../models/indexModel");
+const { ContractSettings, Subscription, Payment, Trip, TripSchedule } = require("../models/indexModel");
 const { asyncHandler } = require("../middleware/errorHandler");
 const { getDriverById, getPassengerById } = require("../utils/userService");
 const { approvePayment, rejectPayment, getPendingPayments } = require("./paymentController");
@@ -361,6 +361,124 @@ exports.approveSubscription = asyncHandler(async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Error approving subscription",
+      error: error.message
+    });
+  }
+});
+
+// GET /admin/trips - Get all trips with filters
+exports.getAllTrips = asyncHandler(async (req, res) => {
+  const { status, driverId, passengerId, start_date, end_date } = req.query;
+
+  try {
+    let whereClause = {};
+
+    // Apply filters
+    if (status) {
+      whereClause.status = status;
+    }
+    if (driverId) {
+      whereClause.driver_id = driverId;
+    }
+    if (passengerId) {
+      whereClause.passenger_id = passengerId;
+    }
+
+    // Date range filter
+    if (start_date || end_date) {
+      whereClause.createdAt = {};
+      if (start_date) {
+        whereClause.createdAt[require("sequelize").Op.gte] = new Date(start_date);
+      }
+      if (end_date) {
+        whereClause.createdAt[require("sequelize").Op.lte] = new Date(end_date);
+      }
+    }
+
+    const trips = await Trip.findAll({
+      where: whereClause,
+      include: [
+        {
+          model: Subscription,
+          as: "subscription",
+          attributes: ['id', 'contract_type', 'status', 'payment_status']
+        },
+        {
+          model: TripSchedule,
+          as: "schedule",
+          required: false
+        }
+      ],
+      order: [['createdAt', 'DESC']],
+    });
+
+    // Enrich trips with user information
+    const enrichedTrips = await Promise.all(
+      trips.map(async (trip) => {
+        const tripData = trip.toJSON();
+        
+        // Get user information from token
+        const passengerInfo = await getUserInfo(req, trip.passenger_id, 'passenger');
+        const driverInfo = await getUserInfo(req, trip.driver_id, 'driver');
+
+        // Calculate trip duration if both times are available
+        let durationMinutes = null;
+        if (trip.started_at && trip.completed_at) {
+          durationMinutes = Math.round((new Date(trip.completed_at) - new Date(trip.started_at)) / (1000 * 60));
+        }
+
+        return {
+          ...tripData,
+          passenger_name: passengerInfo?.name || `Passenger ${trip.passenger_id.slice(-4)}`,
+          passenger_phone: passengerInfo?.phone || 'Not available',
+          passenger_email: passengerInfo?.email || 'Not available',
+          driver_name: driverInfo?.name || `Driver ${trip.driver_id.slice(-4)}`,
+          driver_phone: driverInfo?.phone || 'Not available',
+          driver_email: driverInfo?.email || 'Not available',
+          vehicle_info: driverInfo?.vehicle_info || null,
+          trip_duration_minutes: durationMinutes,
+          is_scheduled: !!tripData.schedule,
+          notification_sent: tripData.schedule?.notified || false,
+        };
+      })
+    );
+
+    // Separate by status for better organization
+    const scheduledTrips = enrichedTrips.filter(t => t.status === "SCHEDULED");
+    const ongoingTrips = enrichedTrips.filter(t => t.status === "ONGOING");
+    const completedTrips = enrichedTrips.filter(t => t.status === "COMPLETED");
+    const cancelledTrips = enrichedTrips.filter(t => t.status === "CANCELLED");
+
+    // Calculate statistics
+    const totalDistance = completedTrips.reduce((sum, trip) => sum + (parseFloat(trip.distance_km) || 0), 0);
+    const totalFare = completedTrips.reduce((sum, trip) => sum + (parseFloat(trip.fare_amount) || 0), 0);
+
+    res.json({
+      success: true,
+      data: {
+        trips: enrichedTrips,
+        scheduled_trips: scheduledTrips,
+        ongoing_trips: ongoingTrips,
+        completed_trips: completedTrips,
+        cancelled_trips: cancelledTrips,
+        statistics: {
+          total_trips: enrichedTrips.length,
+          scheduled_count: scheduledTrips.length,
+          ongoing_count: ongoingTrips.length,
+          completed_count: completedTrips.length,
+          cancelled_count: cancelledTrips.length,
+          total_distance_km: Math.round(totalDistance * 100) / 100,
+          total_fare: Math.round(totalFare * 100) / 100,
+          average_trip_distance: completedTrips.length > 0 ? Math.round((totalDistance / completedTrips.length) * 100) / 100 : 0,
+          average_fare_per_trip: completedTrips.length > 0 ? Math.round((totalFare / completedTrips.length) * 100) / 100 : 0,
+        },
+        filters_applied: { status, driverId, passengerId, start_date, end_date }
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Error fetching trips",
       error: error.message
     });
   }

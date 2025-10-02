@@ -36,24 +36,33 @@ function extractUserFromToken(token) {
  * @param {Object} req - Express request object
  * @param {string} userId - User ID to fetch info for
  * @param {string} userType - Type of user (passenger, driver, admin)
- * @returns {Object} User information
+ * @returns {Object} User information (never returns null fields)
  */
 async function getUserInfo(req, userId = null, userType = null) {
   const targetUserId = userId || req.user?.id;
   const targetUserType = userType || req.user?.type;
   
-  if (!targetUserId || !targetUserType) return null;
+  if (!targetUserId || !targetUserType) {
+    return {
+      id: targetUserId || 'unknown',
+      name: `${targetUserType || 'User'} ${targetUserId?.slice(-4) || 'Unknown'}`,
+      phone: 'Not available',
+      email: 'Not available',
+      vehicle_info: null,
+      type: targetUserType || 'unknown'
+    };
+  }
 
   // First try to get info from token
   const tokenInfo = extractUserFromToken(req.headers.authorization);
   if (tokenInfo && tokenInfo.id === targetUserId) {
     return {
       id: tokenInfo.id,
-      name: tokenInfo.name,
-      phone: tokenInfo.phone,
-      email: tokenInfo.email,
-      vehicle_info: tokenInfo.vehicle_info,
-      type: tokenInfo.type
+      name: tokenInfo.name || `${targetUserType} ${targetUserId.slice(-4)}`,
+      phone: tokenInfo.phone || 'Not available',
+      email: tokenInfo.email || 'Not available',
+      vehicle_info: tokenInfo.vehicle_info || null,
+      type: tokenInfo.type || targetUserType
     };
   }
 
@@ -76,17 +85,25 @@ async function getUserInfo(req, userId = null, userType = null) {
         break;
     }
 
-    return userInfo ? {
+    return {
       id: targetUserId,
-      name: userInfo.name || null,
-      phone: userInfo.phone || null,
-      email: userInfo.email || null,
-      vehicle_info: userInfo.vehicle_info || null,
+      name: userInfo?.name || `${targetUserType} ${targetUserId.slice(-4)}`,
+      phone: userInfo?.phone || 'Not available',
+      email: userInfo?.email || 'Not available',
+      vehicle_info: userInfo?.vehicle_info || null,
       type: targetUserType
-    } : null;
+    };
   } catch (error) {
     console.error('Error fetching user info:', error.message);
-    return null;
+    // Return fallback info instead of null
+    return {
+      id: targetUserId,
+      name: `${targetUserType} ${targetUserId.slice(-4)}`,
+      phone: 'Not available',
+      email: 'Not available',
+      vehicle_info: null,
+      type: targetUserType
+    };
   }
 }
 

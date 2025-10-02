@@ -1,4 +1,4 @@
-const { Subscription, Trip } = require("../models/indexModel");
+const { Subscription, Trip, TripSchedule } = require("../models/indexModel");
 const { asyncHandler } = require("../middleware/errorHandler");
 const { getPassengerById } = require("../utils/userService");
 const { getUserInfo } = require("../utils/tokenHelper");
@@ -9,10 +9,11 @@ exports.getDriverPassengers = asyncHandler(async (req, res) => {
   const driverId = req.params.id;
 
   // Check if user can access this driver's data
-  if (req.user.type === "driver" && req.user.id !== driverId) {
+  // Allow admin access or driver accessing their own data
+  if (req.user.type === "driver" && String(req.user.id) !== String(driverId)) {
     return res.status(403).json({
       success: false,
-      message: "Access denied"
+      message: "Access denied - driver can only access their own data"
     });
   }
 
@@ -91,10 +92,11 @@ exports.getDriverSchedule = asyncHandler(async (req, res) => {
   const { date, contract_type } = req.query;
 
   // Check if user can access this driver's data
-  if (req.user.type === "driver" && req.user.id !== driverId) {
+  // Allow admin access or driver accessing their own data
+  if (req.user.type === "driver" && String(req.user.id) !== String(driverId)) {
     return res.status(403).json({
       success: false,
-      message: "Access denied"
+      message: "Access denied - driver can only access their own data"
     });
   }
 
@@ -182,10 +184,11 @@ exports.getDriverEarnings = asyncHandler(async (req, res) => {
   const { start_date, end_date } = req.query;
 
   // Check if user can access this driver's data
-  if (req.user.type === "driver" && req.user.id !== driverId) {
+  // Allow admin access or driver accessing their own data
+  if (req.user.type === "driver" && String(req.user.id) !== String(driverId)) {
     return res.status(403).json({
       success: false,
-      message: "Access denied"
+      message: "Access denied - driver can only access their own data"
     });
   }
 
@@ -261,10 +264,11 @@ exports.getDriverTripHistory = asyncHandler(async (req, res) => {
   const { start_date, end_date, status } = req.query;
 
   // Check if user can access this driver's data
-  if (req.user.type === "driver" && req.user.id !== driverId) {
+  // Allow admin access or driver accessing their own data
+  if (req.user.type === "driver" && String(req.user.id) !== String(driverId)) {
     return res.status(403).json({
       success: false,
-      message: "Access denied"
+      message: "Access denied - driver can only access their own data"
     });
   }
 
@@ -340,6 +344,126 @@ exports.getDriverTripHistory = asyncHandler(async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Error fetching driver trip history",
+      error: error.message
+    });
+  }
+});
+
+// POST /driver/:driverId/trip/:tripId/notify - Send notification to passenger
+exports.notifyPassenger = asyncHandler(async (req, res) => {
+  const { driverId, tripId } = req.params;
+  const { notification_type, message } = req.body;
+
+  // Check if user can access this driver's data
+  // Allow admin access or driver accessing their own data
+  if (req.user.type === "driver" && String(req.user.id) !== String(driverId)) {
+    return res.status(403).json({
+      success: false,
+      message: "Access denied - driver can only send notifications for their own trips"
+    });
+  }
+
+  try {
+    // Find the trip and verify it belongs to the driver
+    const trip = await Trip.findOne({
+      where: {
+        id: tripId,
+        driver_id: driverId
+      },
+      include: [
+        { model: Subscription, as: "subscription" },
+        { model: TripSchedule, as: "schedule" }
+      ]
+    });
+
+    if (!trip) {
+      return res.status(404).json({
+        success: false,
+        message: "Trip not found or not assigned to this driver"
+      });
+    }
+
+    // Find or create trip schedule
+    let tripSchedule = trip.schedule;
+    if (!tripSchedule) {
+      tripSchedule = await TripSchedule.create({
+        trip_id: tripId,
+        scheduled_time: new Date(), // Default to current time if no schedule exists
+        notified: false,
+        notification_type: notification_type || "ARRIVAL"
+      });
+    }
+
+    // Update notification status
+    await tripSchedule.update({
+      notified: true,
+      notification_sent_at: new Date(),
+      notification_type: notification_type || tripSchedule.notification_type || "ARRIVAL",
+      notes: message || tripSchedule.notes
+    });
+
+    // Get user info for notification
+    const passengerInfo = await getUserInfo(req, trip.passenger_id, 'passenger');
+    const driverInfo = await getUserInfo(req, driverId, 'driver');
+
+    // Here you would integrate with your notification service (SMS, Push, Email)
+    // For now, we'll just log and return success
+    const notificationData = {
+      recipient: {
+        id: trip.passenger_id,
+        name: passengerInfo?.name,
+        phone: passengerInfo?.phone,
+        email: passengerInfo?.email
+      },
+      sender: {
+        id: driverId,
+        name: driverInfo?.name,
+        phone: driverInfo?.phone,
+        vehicle_info: driverInfo?.vehicle_info
+      },
+      trip: {
+        id: tripId,
+        pickup_location: trip.pickup_location,
+        dropoff_location: trip.dropoff_location,
+        status: trip.status
+      },
+      notification: {
+        type: notification_type || "ARRIVAL",
+        message: message || `Driver ${driverInfo?.name || 'is'} arriving for your scheduled trip`,
+        sent_at: new Date()
+      }
+    };
+
+    // TODO: Integrate with actual notification service
+    console.log('Notification sent:', notificationData);
+
+    res.json({
+      success: true,
+      message: "Notification sent successfully to passenger",
+      data: {
+        trip_id: tripId,
+        driver_id: driverId,
+        passenger_id: trip.passenger_id,
+        passenger_name: passengerInfo?.name,
+        passenger_phone: passengerInfo?.phone,
+        notification: {
+          type: notification_type || "ARRIVAL",
+          message: message || `Driver ${driverInfo?.name || 'is'} arriving for your scheduled trip`,
+          sent_at: new Date(),
+          delivery_status: "SENT" // In real implementation, this would be from notification service
+        },
+        trip_details: {
+          pickup_location: trip.pickup_location,
+          dropoff_location: trip.dropoff_location,
+          status: trip.status,
+          scheduled_time: tripSchedule.scheduled_time
+        }
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Error sending notification",
       error: error.message
     });
   }

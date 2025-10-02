@@ -296,11 +296,31 @@ exports.getAvailableContracts = asyncHandler(async (req, res) => {
       order: [['contract_type', 'ASC'], ['createdAt', 'DESC']],
     });
 
+    // Enrich contracts with discount information
+    const enrichedContracts = await Promise.all(
+      contracts.map(async (contract) => {
+        const contractData = contract.toJSON();
+        
+        // Get contract settings for discount info
+        const contractSettings = await ContractSettings.findOne({
+          where: { contract_type: contract.contract_type }
+        });
+
+        return {
+          ...contractData,
+          discount_percentage: contractSettings?.discount_percentage || 0,
+          discount_amount: null, // Will be calculated based on fare
+          base_price_per_km: contractSettings?.base_price_per_km || 0,
+          minimum_fare: contractSettings?.minimum_fare || 0,
+        };
+      })
+    );
+
     res.json({
       success: true,
       data: {
-        contracts: contracts,
-        total_count: contracts.length,
+        contracts: enrichedContracts,
+        total_count: enrichedContracts.length,
         filter_applied: contract_type || null,
       }
     });
