@@ -104,7 +104,14 @@ exports.confirmPickup = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     message: "Pickup confirmed successfully",
-    data: trip
+    data: {
+      trip_id: trip.id,
+      trip,
+      links: {
+        self: `/trip/${trip.id}`,
+        dropoff: `/trip/${trip.id}/dropoff`
+      }
+    }
   });
 });
 

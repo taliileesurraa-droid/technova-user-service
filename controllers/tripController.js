@@ -52,6 +52,7 @@ exports.confirmPickup = asyncHandler(async (req, res) => {
       success: true,
       message: "Pickup confirmed successfully",
       data: {
+        trip_id: updatedTrip.id,
         trip: {
           ...updatedTrip.toJSON(),
           passenger_name: passengerInfo?.name || null,
