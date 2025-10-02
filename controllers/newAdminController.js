@@ -111,7 +111,7 @@ exports.getContractSettings = asyncHandler(async (req, res) => {
 // POST /admin/subscription/:id/assign-driver - Assign driver to passenger subscription
 exports.assignDriverToSubscription = asyncHandler(async (req, res) => {
   const subscriptionId = req.params.id;
-  const { driver_id } = req.body;
+  const { driver_id, passenger_id } = req.body;
 
   if (!driver_id) {
     return res.status(400).json({
@@ -122,7 +122,14 @@ exports.assignDriverToSubscription = asyncHandler(async (req, res) => {
 
   try {
     // Find the subscription
-    const subscription = await Subscription.findByPk(subscriptionId);
+    let subscription = await Subscription.findByPk(subscriptionId);
+    // If not found and passenger_id provided, fallback to latest active subscription for passenger
+    if (!subscription && passenger_id) {
+      subscription = await Subscription.findOne({
+        where: { passenger_id, status: "ACTIVE" },
+        order: [["createdAt", "DESC"]]
+      });
+    }
     if (!subscription) {
       return res.status(404).json({
         success: false,

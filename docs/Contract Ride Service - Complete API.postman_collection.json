@@ -913,6 +913,26 @@
                         }
                     ]
                 },
+                {
+                    "name": "Assign Driver by Passenger",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer {{authToken}}" },
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"driver_id\": \"{{driverId}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/subscription/passenger/{{passengerId}}/assign-driver",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["admin", "subscription", "passenger", "{{passengerId}}", "assign-driver"]
+                        }
+                    },
+                    "response": []
+                },
 				{
 					"name": "Set Contract Settings",
 					"request": {
