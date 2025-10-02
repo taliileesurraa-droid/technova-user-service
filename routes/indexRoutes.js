@@ -30,6 +30,8 @@ router.use("/payments", paymentRoutes);
 router.use("/subscriptions", subscriptionRoutes);
 router.use("/schedules", scheduleRoutes);
 router.use("/trips", tripRoutes);
+// Alias singular form for clients using /trip
+router.use("/trip", tripRoutes);
 router.use("/passenger", passengerRoutes);
 router.use("/driver", driverRoutes);
 router.use("/admin", adminRoutes);

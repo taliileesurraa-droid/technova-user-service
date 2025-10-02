@@ -62,7 +62,11 @@ exports.confirmPickup = asyncHandler(async (req, res) => {
           vehicle_info: driverInfo?.vehicle_info || null,
         },
         confirmed_at: updatedTrip.actual_pickup_time,
-        confirmed_by: passengerInfo?.name || req.user.id
+        confirmed_by: passengerInfo?.name || req.user.id,
+        links: {
+          self: `/trip/${tripId}`,
+          dropoff: `/trip/${tripId}/dropoff`
+        }
       }
     });
   } catch (error) {
