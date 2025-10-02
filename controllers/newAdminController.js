@@ -140,9 +140,17 @@ exports.assignDriverToSubscription = asyncHandler(async (req, res) => {
       });
     }
 
-    // Update subscription with driver assignment
+    // Update subscription with driver assignment and store key driver fields for convenience
     await subscription.update({
       driver_id: driver_id,
+      driver_name: driverInfo.name || null,
+      driver_phone: driverInfo.phone || null,
+      driver_email: driverInfo.email || null,
+      vehicle_info: {
+        car_model: driverInfo.carModel || driverInfo.vehicleType || null,
+        car_plate: driverInfo.carPlate || null,
+        car_color: driverInfo.carColor || null
+      }
     });
 
     // Get passenger info for response
@@ -164,10 +172,24 @@ exports.assignDriverToSubscription = asyncHandler(async (req, res) => {
           driver_phone: driverInfo.phone || null,
           driver_email: driverInfo.email || null,
           vehicle_info: {
-            car_model: driverInfo.carModel,
-            car_plate: driverInfo.carPlate,
-            car_color: driverInfo.carColor,
+            car_model: driverInfo.carModel || driverInfo.vehicleType || null,
+            car_plate: driverInfo.carPlate || null,
+            car_color: driverInfo.carColor || null
           }
+        },
+        full_driver: {
+          id: driverInfo.id,
+          name: driverInfo.name,
+          phone: driverInfo.phone,
+          email: driverInfo.email,
+          vehicleType: driverInfo.vehicleType,
+          carModel: driverInfo.carModel,
+          carPlate: driverInfo.carPlate,
+          carColor: driverInfo.carColor,
+          rating: driverInfo.rating,
+          available: driverInfo.available,
+          lastKnownLocation: driverInfo.lastKnownLocation,
+          paymentPreference: driverInfo.paymentPreference
         }
       }
     });
