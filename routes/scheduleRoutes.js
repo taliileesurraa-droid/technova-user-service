@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { authenticate, authorize } = require("../middleware/auth");
+const { authorize } = require("../middleware/auth");
 const controller = require("../controllers/scheduleController");
 const { validateDaysOfWeek, validateWeeklyPattern } = require("../utils/dayValidation");
 
@@ -19,9 +19,6 @@ const validateScheduleDays = (req, res, next) => {
     res.status(400).json({ success: false, error: error.message });
   }
 };
-
-
-router.use(authenticate);
 
 router.post("/", authorize("admin"),  validateScheduleDays, controller.createRideSchedule);
 router.get("/", authorize("admin", "driver"), controller.getRideSchedules);

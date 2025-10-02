@@ -1,10 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const { authenticate, authorize } = require("../middleware/auth");
+const { authorize } = require("../middleware/auth");
 const controller = require("../controllers/contractController");
 const { validateContractDates } = require("../middleware/dateValidation");
-
-router.use(authenticate);
 
 // Put SPECIFIC routes BEFORE parameterized routes
 router.get('/active', authorize("admin", "superadmin", "passenger", "driver"), controller.getActiveContracts);

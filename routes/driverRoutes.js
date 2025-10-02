@@ -1,10 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const controller = require("../controllers/driverController");
-const { authenticate, authorize } = require("../middleware/auth");
-
-// Apply authentication to all routes
-router.use(authenticate);
+const { authorize } = require("../middleware/auth");
 
 // Driver-specific routes
 router.get("/:id/passengers", authorize("admin", "driver"), controller.getSubscribedPassengers);

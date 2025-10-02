@@ -1,10 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const controller = require("../controllers/adminController");
-const { authenticate, authorize } = require("../middleware/auth");
-
-// Apply authentication to all routes
-router.use(authenticate);
+const { authorize } = require("../middleware/auth");
 
 // Admin-only routes
 router.post("/contract/price", authorize("admin"), controller.setContractPricing);

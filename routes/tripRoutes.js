@@ -2,11 +2,8 @@ const express = require("express");
 const router = express.Router();
 const { Trip, Contract, Subscription } = require("../models/indexModel");
 const { asyncHandler } = require("../middleware/errorHandler");
-const { authenticate, authorize } = require("../middleware/auth");
+const { authorize } = require("../middleware/auth");
 const { getPassengerById, getDriverById } = require("../utils/userService");
-
-// Apply authentication to all routes
-router.use(authenticate);
 
 // CREATE - Create Trip
 const createTrip = asyncHandler(async (req, res) => {
