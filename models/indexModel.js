@@ -6,6 +6,8 @@ const Discount = require("./discountModel");
 const Payment = require("./paymentModel");
 const Subscription = require("./subscriptionModel");
 const RideSchedule = require("./rideScheduleModel");
+const Trip = require("./tripModel");
+const Pricing = require("./pricingModel");
 
 /**
  * ========================
@@ -56,9 +58,31 @@ RideSchedule.belongsTo(Contract, {
   as: "contract",
 });
 
+// Trip ↔ Contract (N:1)
+Trip.belongsTo(Contract, {
+  foreignKey: "contract_id",
+  as: "contract",
+});
+Contract.hasMany(Trip, {
+  foreignKey: "contract_id",
+  as: "trips",
+});
+
+// Trip ↔ Subscription (N:1)
+Trip.belongsTo(Subscription, {
+  foreignKey: "subscription_id",
+  as: "subscription",
+});
+Subscription.hasMany(Trip, {
+  foreignKey: "subscription_id",
+  as: "trips",
+});
+
 // Payment ↔ Passenger (external reference → user service)
 // Subscription ↔ Passenger (external reference → user service)
 // RideSchedule ↔ Driver (external reference → driver service)
+// Trip ↔ Passenger (external reference → user service)
+// Trip ↔ Driver (external reference → driver service)
 // 👉 note: not hard foreign keys here, just IDs stored.
 
 /**
@@ -89,6 +113,12 @@ const syncDB = async () => {
     await RideSchedule.sync({ alter: true });
     console.log("✅ RideSchedule table synced successfully!");
 
+    await Trip.sync({ alter: true });
+    console.log("✅ Trip table synced successfully!");
+
+    await Pricing.sync({ alter: true });
+    console.log("✅ Pricing table synced successfully!");
+
     console.log("✅ All Contract Service tables synced successfully!");
   } catch (error) {
     console.error("❌ Error syncing database:", error);
@@ -104,5 +134,7 @@ module.exports = {
   Payment,
   Subscription,
   RideSchedule,
+  Trip,
+  Pricing,
   syncDB,
 };

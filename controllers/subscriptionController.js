@@ -1,10 +1,19 @@
 const { Subscription, Contract } = require("../models/indexModel");
 const { asyncHandler } = require("../middleware/errorHandler");
 const { getPassengerById } = require("../utils/userService");
+const { calculateFareFromCoordinates } = require("../utils/pricingService");
 
 // CREATE
 exports.createSubscription = asyncHandler(async (req, res) => {
-  const { contract_id, amount_paid } = req.body;
+  const { 
+    contract_id, 
+    amount_paid, 
+    passenger_id,
+    pickup_lat,
+    pickup_lon,
+    dropoff_lat,
+    dropoff_lon 
+  } = req.body;
 
   const contract = await Contract.findByPk(contract_id);
   if (!contract)
@@ -12,12 +21,65 @@ exports.createSubscription = asyncHandler(async (req, res) => {
       .status(404)
       .json({ success: false, message: "Contract not found" });
 
-  let status = "PENDING";
-  if (amount_paid >= contract.cost) status = "ACTIVE";
-  else if (amount_paid > 0) status = "PARTIAL";
+  // If coordinates are provided, calculate fare and update contract cost
+  let calculatedFare = null;
+  let updatedContractCost = contract.cost;
 
-  const subscription = await Subscription.create({ ...req.body, status });
-  res.status(201).json({ success: true, data: subscription });
+  if (pickup_lat && pickup_lon && dropoff_lat && dropoff_lon) {
+    try {
+      const fareResult = await calculateFareFromCoordinates(
+        parseFloat(pickup_lat), 
+        parseFloat(pickup_lon), 
+        parseFloat(dropoff_lat), 
+        parseFloat(dropoff_lon), 
+        contract.contract_type
+      );
+
+      if (fareResult.success) {
+        calculatedFare = fareResult.data;
+        // For monthly subscription, multiply by working days
+        updatedContractCost = Math.round(fareResult.data.final_fare * 22 * 100) / 100;
+        
+        // Update contract with calculated cost if it's different
+        if (Math.abs(updatedContractCost - parseFloat(contract.cost)) > 0.01) {
+          await contract.update({ cost: updatedContractCost });
+        }
+      }
+    } catch (error) {
+      console.error('Error calculating fare for subscription:', error);
+    }
+  }
+
+  let status = "PENDING";
+  const contractCost = parseFloat(updatedContractCost);
+  const paidAmount = parseFloat(amount_paid || 0);
+  
+  if (paidAmount >= contractCost) status = "ACTIVE";
+  else if (paidAmount > 0) status = "PARTIAL";
+
+  const subscriptionData = { 
+    ...req.body, 
+    status,
+    calculated_fare: calculatedFare ? JSON.stringify(calculatedFare) : null
+  };
+
+  const subscription = await Subscription.create(subscriptionData);
+  
+  const response = {
+    success: true,
+    data: subscription,
+  };
+
+  // Include fare calculation in response if available
+  if (calculatedFare) {
+    response.fare_calculation = {
+      ...calculatedFare,
+      monthly_cost: updatedContractCost,
+      contract_cost_updated: Math.abs(updatedContractCost - parseFloat(contract.cost)) > 0.01
+    };
+  }
+
+  res.status(201).json(response);
 });
 
 // READ all - Admin sees all, Passenger sees only their own

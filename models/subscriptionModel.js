@@ -30,10 +30,15 @@ const Subscription = sequelize.define(
       type: DataTypes.DATEONLY,
       allowNull: false,
     },    
-    status: {
-      type: DataTypes.ENUM("PENDING", "ACTIVE", "PARTIAL", "EXPIRED", "CANCELLED"),
-      defaultValue: "PENDING",
-    },
+  status: {
+    type: DataTypes.ENUM("PENDING", "ACTIVE", "PARTIAL", "EXPIRED", "CANCELLED"),
+    defaultValue: "PENDING",
+  },
+  calculated_fare: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: "JSON string containing fare calculation details"
+  },
   },
   {
     tableName: "subscriptions",
