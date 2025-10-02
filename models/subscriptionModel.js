@@ -10,16 +10,40 @@ const Subscription = sequelize.define(
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
     },
-    contract_id: {
-      type: DataTypes.UUID,
-      allowNull: false,
-    },
     passenger_id: {
       type: DataTypes.UUID,
       allowNull: false,
     },
-    amount_paid: {
-      type: DataTypes.DECIMAL(10, 2),
+    driver_id: {
+      type: DataTypes.UUID,
+      allowNull: true, // Assigned later by admin
+    },
+    pickup_location: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    dropoff_location: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    pickup_latitude: {
+      type: DataTypes.DECIMAL(10, 8),
+      allowNull: true,
+    },
+    pickup_longitude: {
+      type: DataTypes.DECIMAL(11, 8),
+      allowNull: true,
+    },
+    dropoff_latitude: {
+      type: DataTypes.DECIMAL(10, 8),
+      allowNull: true,
+    },
+    dropoff_longitude: {
+      type: DataTypes.DECIMAL(11, 8),
+      allowNull: true,
+    },
+    contract_type: {
+      type: DataTypes.ENUM("DAILY", "WEEKLY", "MONTHLY", "YEARLY"),
       allowNull: false,
     },
     start_date: {
@@ -29,21 +53,47 @@ const Subscription = sequelize.define(
     end_date: {
       type: DataTypes.DATEONLY,
       allowNull: false,
-    },    
-  status: {
-    type: DataTypes.ENUM("PENDING", "ACTIVE", "PARTIAL", "EXPIRED", "CANCELLED"),
-    defaultValue: "PENDING",
-  },
-  calculated_fare: {
-    type: DataTypes.TEXT,
-    allowNull: true,
-    comment: "JSON string containing fare calculation details"
-  },
+    },
+    fare: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+      defaultValue: 0.00,
+    },
+    discount_applied: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+      defaultValue: 0.00,
+    },
+    final_fare: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+      defaultValue: 0.00,
+    },
+    distance_km: {
+      type: DataTypes.DECIMAL(8, 2),
+      allowNull: true,
+    },
+    status: {
+      type: DataTypes.ENUM("PENDING", "ACTIVE", "COMPLETED", "CANCELLED"),
+      defaultValue: "PENDING",
+    },
+    payment_status: {
+      type: DataTypes.ENUM("PENDING", "PAID", "FAILED", "REFUNDED"),
+      defaultValue: "PENDING",
+    },
+    payment_reference: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    notes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
   },
   {
     tableName: "subscriptions",
     timestamps: true,
-    updatedAt: false,
+    updatedAt: true,
   }
 );
 

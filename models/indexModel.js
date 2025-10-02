@@ -8,6 +8,7 @@ const Subscription = require("./subscriptionModel");
 const RideSchedule = require("./rideScheduleModel");
 const Trip = require("./tripModel");
 const Pricing = require("./pricingModel");
+const ContractSettings = require("./contractSettingsModel");
 
 /**
  * ========================
@@ -38,15 +39,7 @@ Payment.belongsTo(Contract, {
   as: "contract",
 });
 
-// Contract ↔ Subscription (1:N)
-Contract.hasMany(Subscription, {
-  foreignKey: "contract_id",
-  as: "subscriptions",
-});
-Subscription.belongsTo(Contract, {
-  foreignKey: "contract_id",
-  as: "contract",
-});
+// Note: Subscriptions are now independent entities, no longer tied to contracts
 
 // Contract ↔ RideSchedule (1:N)
 Contract.hasMany(RideSchedule, {
@@ -119,6 +112,9 @@ const syncDB = async () => {
     await Pricing.sync({ alter: true });
     console.log("✅ Pricing table synced successfully!");
 
+    await ContractSettings.sync({ alter: true });
+    console.log("✅ ContractSettings table synced successfully!");
+
     console.log("✅ All Contract Service tables synced successfully!");
   } catch (error) {
     console.error("❌ Error syncing database:", error);
@@ -136,5 +132,6 @@ module.exports = {
   RideSchedule,
   Trip,
   Pricing,
+  ContractSettings,
   syncDB,
 };

@@ -1,0 +1,252 @@
+const { Subscription, ContractSettings } = require("../models/indexModel");
+const { asyncHandler } = require("../middleware/errorHandler");
+const { getPassengerById, getDriverById } = require("../utils/userService");
+const { calculateSubscriptionFare } = require("../services/subscriptionService");
+
+// POST /subscription/create - Create subscription with fare estimation
+exports.createSubscription = asyncHandler(async (req, res) => {
+  const {
+    pickup_location,
+    dropoff_location,
+    pickup_latitude,
+    pickup_longitude,
+    dropoff_latitude,
+    dropoff_longitude,
+    contract_type,
+    start_date,
+    end_date,
+  } = req.body;
+
+  // Validate required fields
+  if (!pickup_location || !dropoff_location || !contract_type || !start_date || !end_date) {
+    return res.status(400).json({
+      success: false,
+      message: "Missing required fields: pickup_location, dropoff_location, contract_type, start_date, end_date"
+    });
+  }
+
+  // Validate contract type
+  if (!["DAILY", "WEEKLY", "MONTHLY", "YEARLY"].includes(contract_type)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid contract_type. Must be one of: DAILY, WEEKLY, MONTHLY, YEARLY"
+    });
+  }
+
+  // Get passenger ID from authenticated user
+  const passengerId = req.user.id;
+
+  try {
+    // Calculate fare estimation
+    const fareResult = await calculateSubscriptionFare(
+      pickup_location,
+      dropoff_location,
+      pickup_latitude,
+      pickup_longitude,
+      dropoff_latitude,
+      dropoff_longitude,
+      contract_type
+    );
+
+    if (!fareResult.success) {
+      return res.status(400).json(fareResult);
+    }
+
+    // Create subscription with PENDING status
+    const subscriptionData = {
+      passenger_id: passengerId,
+      pickup_location,
+      dropoff_location,
+      pickup_latitude: pickup_latitude || null,
+      pickup_longitude: pickup_longitude || null,
+      dropoff_latitude: dropoff_latitude || null,
+      dropoff_longitude: dropoff_longitude || null,
+      contract_type,
+      start_date,
+      end_date,
+      fare: fareResult.data.base_fare,
+      discount_applied: fareResult.data.discount_amount,
+      final_fare: fareResult.data.total_fare,
+      distance_km: fareResult.data.distance_km,
+      status: "PENDING",
+      payment_status: "PENDING",
+    };
+
+    const subscription = await Subscription.create(subscriptionData);
+
+    // Get passenger details for response
+    const authHeader = req.headers && req.headers.authorization ? { headers: { Authorization: req.headers.authorization } } : {};
+    let passengerInfo = null;
+    try {
+      passengerInfo = await getPassengerById(passengerId, authHeader);
+    } catch (_) {}
+
+    res.status(201).json({
+      success: true,
+      message: "Subscription created successfully with fare estimation",
+      data: {
+        subscription: {
+          ...subscription.toJSON(),
+          passenger_name: passengerInfo?.name || null,
+          passenger_phone: passengerInfo?.phone || null,
+          passenger_email: passengerInfo?.email || null,
+        },
+        fare_estimation: fareResult.data,
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Error creating subscription",
+      error: error.message
+    });
+  }
+});
+
+// POST /subscription/:id/payment - Process payment for subscription
+exports.processPayment = asyncHandler(async (req, res) => {
+  const subscriptionId = req.params.id;
+  const { payment_reference, payment_method = "BANK_TRANSFER" } = req.body;
+
+  if (!payment_reference) {
+    return res.status(400).json({
+      success: false,
+      message: "payment_reference is required"
+    });
+  }
+
+  const subscription = await Subscription.findByPk(subscriptionId);
+  if (!subscription) {
+    return res.status(404).json({
+      success: false,
+      message: "Subscription not found"
+    });
+  }
+
+  // Check if user can access this subscription
+  if (req.user.type === "passenger" && subscription.passenger_id !== req.user.id) {
+    return res.status(403).json({
+      success: false,
+      message: "Access denied"
+    });
+  }
+
+  // Check if subscription is in valid state for payment
+  if (subscription.payment_status === "PAID") {
+    return res.status(400).json({
+      success: false,
+      message: "Subscription is already paid"
+    });
+  }
+
+  try {
+    // Update subscription with payment information
+    await subscription.update({
+      payment_status: "PAID",
+      payment_reference,
+      status: "ACTIVE", // Activate subscription after successful payment
+    });
+
+    // Get passenger details for response
+    const authHeader = req.headers && req.headers.authorization ? { headers: { Authorization: req.headers.authorization } } : {};
+    let passengerInfo = null;
+    try {
+      passengerInfo = await getPassengerById(subscription.passenger_id, authHeader);
+    } catch (_) {}
+
+    res.json({
+      success: true,
+      message: "Payment processed successfully. Subscription is now active.",
+      data: {
+        subscription: {
+          ...subscription.toJSON(),
+          passenger_name: passengerInfo?.name || null,
+          passenger_phone: passengerInfo?.phone || null,
+          passenger_email: passengerInfo?.email || null,
+        }
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Error processing payment",
+      error: error.message
+    });
+  }
+});
+
+// GET /passenger/:id/subscriptions - Get passenger's subscriptions (active and history)
+exports.getPassengerSubscriptions = asyncHandler(async (req, res) => {
+  const passengerId = req.params.id;
+
+  // Check if user can access this passenger's data
+  if (req.user.type === "passenger" && req.user.id !== passengerId) {
+    return res.status(403).json({
+      success: false,
+      message: "Access denied"
+    });
+  }
+
+  try {
+    const subscriptions = await Subscription.findAll({
+      where: { passenger_id: passengerId },
+      order: [['createdAt', 'DESC']],
+    });
+
+    // Get passenger and driver information
+    const authHeader = req.headers && req.headers.authorization ? { headers: { Authorization: req.headers.authorization } } : {};
+    const uniqueDriverIds = [...new Set(subscriptions.map(s => s.driver_id).filter(Boolean))];
+    
+    const [passengerInfo, driverInfoMap] = await Promise.all([
+      getPassengerById(passengerId, authHeader).catch(() => null),
+      Promise.all(uniqueDriverIds.map(async (driverId) => {
+        try {
+          const info = await getDriverById(driverId, authHeader);
+          return [driverId, info];
+        } catch (_) { return [driverId, null]; }
+      })).then(results => new Map(results.filter(([,v]) => v)))
+    ]);
+
+    // Enrich subscriptions with user information
+    const enrichedSubscriptions = subscriptions.map(subscription => {
+      const subData = subscription.toJSON();
+      const driverInfo = driverInfoMap.get(subscription.driver_id);
+      
+      return {
+        ...subData,
+        passenger_name: passengerInfo?.name || null,
+        passenger_phone: passengerInfo?.phone || null,
+        passenger_email: passengerInfo?.email || null,
+        driver_name: driverInfo?.name || null,
+        driver_phone: driverInfo?.phone || null,
+        driver_email: driverInfo?.email || null,
+        vehicle_info: driverInfo ? {
+          car_model: driverInfo.carModel,
+          car_plate: driverInfo.carPlate,
+          car_color: driverInfo.carColor,
+        } : null,
+      };
+    });
+
+    // Separate active and completed subscriptions
+    const activeSubscriptions = enrichedSubscriptions.filter(s => s.status === "ACTIVE");
+    const historySubscriptions = enrichedSubscriptions.filter(s => s.status !== "ACTIVE");
+
+    res.json({
+      success: true,
+      data: {
+        active_subscriptions: activeSubscriptions,
+        subscription_history: historySubscriptions,
+        total_subscriptions: enrichedSubscriptions.length,
+        active_count: activeSubscriptions.length,
+        history_count: historySubscriptions.length,
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Error fetching passenger subscriptions",
+      error: error.message
+    });
+  }
+});

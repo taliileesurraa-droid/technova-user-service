@@ -14,6 +14,12 @@ const passengerRoutes = require("./passengerRoutes");
 const driverRoutes = require("./driverRoutes");
 const adminRoutes = require("./adminRoutes");
 
+// New workflow routes
+const newSubscriptionRoutes = require("./newSubscriptionRoutes");
+const newPassengerRoutes = require("./newPassengerRoutes");
+const newAdminRoutes = require("./newAdminRoutes");
+const newDriverRoutes = require("./newDriverRoutes");
+
 // ✅ all routes require authentication
 router.use(authenticate);
 
@@ -27,6 +33,12 @@ router.use("/trips", tripRoutes);
 router.use("/passenger", passengerRoutes);
 router.use("/driver", driverRoutes);
 router.use("/admin", adminRoutes);
+
+// New workflow routes
+router.use("/subscription", newSubscriptionRoutes);
+router.use("/passenger", newPassengerRoutes);
+router.use("/admin", newAdminRoutes);
+router.use("/driver", newDriverRoutes);
 
 // Export the main router
 module.exports = router;
