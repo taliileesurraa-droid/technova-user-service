@@ -36,6 +36,11 @@ const authorize = (...allowedTypes) => {
 
     const userType = req.user.type;
 
+    // If an endpoint allows admin, also allow superadmin
+    if (allowedTypes.includes("admin") && (userType === "admin" || userType === "superadmin")) {
+      return next();
+    }
+
     // For superadmin, we need to check the roles array
     if (
       userType === "admin" &&
