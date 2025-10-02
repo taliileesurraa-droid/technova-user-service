@@ -1,6 +1,7 @@
-const { ContractSettings, Subscription } = require("../models/indexModel");
+const { ContractSettings, Subscription, Payment } = require("../models/indexModel");
 const { asyncHandler } = require("../middleware/errorHandler");
 const { getDriverById, getPassengerById } = require("../utils/userService");
+const { approvePayment, rejectPayment, getPendingPayments } = require("./paymentController");
 
 // POST /admin/contract/settings - Set contract base price per km and discounts
 exports.setContractSettings = asyncHandler(async (req, res) => {
@@ -258,3 +259,8 @@ exports.getAllSubscriptions = asyncHandler(async (req, res) => {
     });
   }
 });
+
+// Payment approval methods - delegate to paymentController
+exports.getPendingPayments = getPendingPayments;
+exports.approvePayment = approvePayment;
+exports.rejectPayment = rejectPayment;

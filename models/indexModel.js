@@ -39,6 +39,16 @@ Payment.belongsTo(Contract, {
   as: "contract",
 });
 
+// Subscription ↔ Payment (1:N)
+Subscription.hasMany(Payment, {
+  foreignKey: "subscription_id",
+  as: "payments",
+});
+Payment.belongsTo(Subscription, {
+  foreignKey: "subscription_id",
+  as: "subscription",
+});
+
 // Contract ↔ Subscription (1:N)
 Contract.hasMany(Subscription, {
   foreignKey: "contract_id",

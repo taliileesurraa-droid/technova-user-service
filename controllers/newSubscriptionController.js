@@ -2,6 +2,7 @@ const { Subscription, Contract, ContractSettings } = require("../models/indexMod
 const { asyncHandler } = require("../middleware/errorHandler");
 const { getPassengerById, getDriverById } = require("../utils/userService");
 const { calculateSubscriptionFare, getAvailableContracts } = require("../services/subscriptionService");
+const { createPaymentForSubscription } = require("./paymentController");
 
 // POST /subscription/create - Create subscription with fare estimation
 exports.createSubscription = asyncHandler(async (req, res) => {
@@ -111,16 +112,19 @@ exports.createSubscription = asyncHandler(async (req, res) => {
 // POST /subscription/:id/payment - Process payment for subscription
 exports.processPayment = asyncHandler(async (req, res) => {
   const subscriptionId = req.params.id;
-  const { payment_reference, payment_method = "BANK_TRANSFER" } = req.body;
+  const { payment_method, transaction_reference, amount } = req.body;
 
-  if (!payment_reference) {
+  if (!payment_method) {
     return res.status(400).json({
       success: false,
-      message: "payment_reference is required"
+      message: "payment_method is required"
     });
   }
 
-  const subscription = await Subscription.findByPk(subscriptionId);
+  const subscription = await Subscription.findByPk(subscriptionId, {
+    include: [{ model: Contract, as: "contract" }]
+  });
+  
   if (!subscription) {
     return res.status(404).json({
       success: false,
@@ -145,12 +149,15 @@ exports.processPayment = asyncHandler(async (req, res) => {
   }
 
   try {
-    // Update subscription with payment information
-    await subscription.update({
-      payment_status: "PAID",
-      payment_reference,
-      status: "ACTIVE", // Activate subscription after successful payment
-    });
+    // Create payment record for admin approval
+    const paymentData = {
+      amount: amount || subscription.final_fare,
+      payment_method,
+      transaction_reference,
+      due_date: new Date()
+    };
+
+    const payment = await createPaymentForSubscription(subscriptionId, paymentData, req.file);
 
     // Get passenger details for response
     const authHeader = req.headers && req.headers.authorization ? { headers: { Authorization: req.headers.authorization } } : {};
@@ -161,13 +168,22 @@ exports.processPayment = asyncHandler(async (req, res) => {
 
     res.json({
       success: true,
-      message: "Payment processed successfully. Subscription is now active.",
+      message: "Payment submitted for admin approval",
       data: {
         subscription: {
           ...subscription.toJSON(),
           passenger_name: passengerInfo?.name || null,
           passenger_phone: passengerInfo?.phone || null,
           passenger_email: passengerInfo?.email || null,
+        },
+        payment: {
+          id: payment.id,
+          amount: payment.amount,
+          method: payment.payment_method,
+          transaction_reference: payment.transaction_reference,
+          status: "PENDING",
+          admin_approved: false,
+          submitted_at: payment.createdAt
         }
       }
     });

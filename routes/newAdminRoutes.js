@@ -9,4 +9,9 @@ router.get("/contract/settings", authorize("admin"), controller.getContractSetti
 router.post("/subscription/:id/assign-driver", authorize("admin"), controller.assignDriverToSubscription);
 router.get("/subscriptions", authorize("admin"), controller.getAllSubscriptions);
 
+// Payment approval
+router.get("/payments/pending", authorize("admin"), controller.getPendingPayments);
+router.patch("/payment/:id/approve", authorize("admin"), controller.approvePayment);
+router.patch("/payment/:id/reject", authorize("admin"), controller.rejectPayment);
+
 module.exports = router;

@@ -38,4 +38,9 @@ router.put(
 
 router.delete("/:id", authorize("admin"), controller.deletePayment);
 
+// Admin approval routes
+router.get("/pending", authorize("admin"), controller.getPendingPayments);
+router.patch("/:id/approve", authorize("admin"), controller.approvePayment);
+router.patch("/:id/reject", authorize("admin"), controller.rejectPayment);
+
 module.exports = router;
