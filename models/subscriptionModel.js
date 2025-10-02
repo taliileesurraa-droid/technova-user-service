@@ -10,6 +10,10 @@ const Subscription = sequelize.define(
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
     },
+    contract_id: {
+      type: DataTypes.UUID,
+      allowNull: false,
+    },
     passenger_id: {
       type: DataTypes.UUID,
       allowNull: false,
@@ -43,7 +47,7 @@ const Subscription = sequelize.define(
       allowNull: true,
     },
     contract_type: {
-      type: DataTypes.ENUM("DAILY", "WEEKLY", "MONTHLY", "YEARLY"),
+      type: DataTypes.ENUM("INDIVIDUAL", "GROUP", "INSTITUTIONAL"),
       allowNull: false,
     },
     start_date: {

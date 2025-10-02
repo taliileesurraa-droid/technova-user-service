@@ -39,7 +39,15 @@ Payment.belongsTo(Contract, {
   as: "contract",
 });
 
-// Note: Subscriptions are now independent entities, no longer tied to contracts
+// Contract ↔ Subscription (1:N)
+Contract.hasMany(Subscription, {
+  foreignKey: "contract_id",
+  as: "subscriptions",
+});
+Subscription.belongsTo(Contract, {
+  foreignKey: "contract_id",
+  as: "contract",
+});
 
 // Contract ↔ RideSchedule (1:N)
 Contract.hasMany(RideSchedule, {

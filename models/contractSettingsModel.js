@@ -8,7 +8,7 @@ const ContractSettings = sequelize.define("ContractSettings", {
     primaryKey: true,
   },
   contract_type: {
-    type: DataTypes.ENUM("DAILY", "WEEKLY", "MONTHLY", "YEARLY"),
+    type: DataTypes.ENUM("INDIVIDUAL", "GROUP", "INSTITUTIONAL"),
     allowNull: false,
     unique: true,
   },

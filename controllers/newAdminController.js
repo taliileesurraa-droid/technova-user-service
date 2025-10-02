@@ -20,10 +20,10 @@ exports.setContractSettings = asyncHandler(async (req, res) => {
   }
 
   // Validate contract type
-  if (!["DAILY", "WEEKLY", "MONTHLY", "YEARLY"].includes(contract_type)) {
+  if (!["INDIVIDUAL", "GROUP", "INSTITUTIONAL"].includes(contract_type)) {
     return res.status(400).json({
       success: false,
-      message: "Invalid contract_type. Must be one of: DAILY, WEEKLY, MONTHLY, YEARLY"
+      message: "Invalid contract_type. Must be one of: INDIVIDUAL, GROUP, INSTITUTIONAL"
     });
   }
 

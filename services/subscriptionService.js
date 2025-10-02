@@ -1,4 +1,4 @@
-const { ContractSettings } = require("../models/indexModel");
+const { ContractSettings, Contract } = require("../models/indexModel");
 const { calculateDistance } = require("../utils/pricingService");
 
 /**
@@ -49,17 +49,14 @@ async function calculateSubscriptionFare(pickupLocation, dropoffLocation, pickup
     // Calculate multiplier based on contract type
     let multiplier = 1;
     switch (contractType) {
-      case 'DAILY':
-        multiplier = 1;
+      case 'INDIVIDUAL':
+        multiplier = 1; // Per trip
         break;
-      case 'WEEKLY':
-        multiplier = 7;
+      case 'GROUP':
+        multiplier = 7; // Weekly rate
         break;
-      case 'MONTHLY':
-        multiplier = 30;
-        break;
-      case 'YEARLY':
-        multiplier = 365;
+      case 'INSTITUTIONAL':
+        multiplier = 30; // Monthly rate
         break;
     }
 
@@ -100,14 +97,45 @@ async function calculateSubscriptionFare(pickupLocation, dropoffLocation, pickup
  */
 function getContractTypeMultipliers() {
   return {
-    DAILY: { multiplier: 1, description: 'Per day' },
-    WEEKLY: { multiplier: 7, description: 'Per week (7 days)' },
-    MONTHLY: { multiplier: 30, description: 'Per month (30 days)' },
-    YEARLY: { multiplier: 365, description: 'Per year (365 days)' },
+    INDIVIDUAL: { multiplier: 1, description: 'Per trip' },
+    GROUP: { multiplier: 7, description: 'Per week (7 days)' },
+    INSTITUTIONAL: { multiplier: 30, description: 'Per month (30 days)' },
   };
+}
+
+/**
+ * Get available contracts for subscription
+ * @param {string} contractType - Contract type filter
+ * @returns {Object} Available contracts
+ */
+async function getAvailableContracts(contractType = null) {
+  try {
+    let whereClause = { status: 'ACTIVE' };
+    if (contractType) {
+      whereClause.contract_type = contractType;
+    }
+
+    const contracts = await Contract.findAll({
+      where: whereClause,
+      order: [['contract_type', 'ASC'], ['createdAt', 'DESC']],
+    });
+
+    return {
+      success: true,
+      data: contracts,
+    };
+  } catch (error) {
+    console.error('Error fetching available contracts:', error);
+    return {
+      success: false,
+      message: 'Error fetching available contracts',
+      error: error.message,
+    };
+  }
 }
 
 module.exports = {
   calculateSubscriptionFare,
   getContractTypeMultipliers,
+  getAvailableContracts,
 };

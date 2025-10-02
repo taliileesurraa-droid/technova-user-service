@@ -26,7 +26,7 @@ CREATE TABLE subscriptions (
   pickup_longitude DECIMAL(11,8),
   dropoff_latitude DECIMAL(10,8),
   dropoff_longitude DECIMAL(11,8),
-  contract_type ENUM('DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY') NOT NULL,
+  contract_type ENUM('INDIVIDUAL', 'GROUP', 'INSTITUTIONAL') NOT NULL,
   start_date DATE NOT NULL,
   end_date DATE NOT NULL,
   fare DECIMAL(10,2) NOT NULL DEFAULT 0.00,
@@ -44,7 +44,7 @@ CREATE TABLE subscriptions (
 -- New Contract Settings Table
 CREATE TABLE contract_settings (
   id UUID PRIMARY KEY,
-  contract_type ENUM('DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY') UNIQUE NOT NULL,
+  contract_type ENUM('INDIVIDUAL', 'GROUP', 'INSTITUTIONAL') UNIQUE NOT NULL,
   base_price_per_km DECIMAL(8,2) NOT NULL DEFAULT 0.00,
   discount_percentage DECIMAL(5,2) NOT NULL DEFAULT 0.00,
   minimum_fare DECIMAL(8,2) NOT NULL DEFAULT 0.00,
@@ -59,20 +59,26 @@ CREATE TABLE contract_settings (
 
 ### 🔄 **Passenger Workflow**
 
-#### 1. Create Subscription with Fare Estimation
+#### 1. Get Available Contracts
+```http
+GET /api/subscription/contracts?contract_type=INSTITUTIONAL
+Authorization: Bearer {passenger_token}
+```
+
+#### 2. Create Subscription with Fare Estimation
 ```http
 POST /api/subscription/create
 Authorization: Bearer {passenger_token}
 Content-Type: application/json
 
 {
+  "contract_id": "contract-uuid-123",
   "pickup_location": "Bole International Airport",
   "dropoff_location": "Addis Ababa University",
   "pickup_latitude": 8.9806,
   "pickup_longitude": 38.7578,
   "dropoff_latitude": 9.0365,
   "dropoff_longitude": 38.7578,
-  "contract_type": "MONTHLY",
   "start_date": "2024-01-01",
   "end_date": "2024-01-31"
 }
@@ -89,7 +95,7 @@ Content-Type: application/json
       "passenger_id": "passenger-uuid",
       "pickup_location": "Bole International Airport",
       "dropoff_location": "Addis Ababa University",
-      "contract_type": "MONTHLY",
+      "contract_type": "INSTITUTIONAL",
       "start_date": "2024-01-01",
       "end_date": "2024-01-31",
       "fare": 150.00,
@@ -113,7 +119,7 @@ Content-Type: application/json
 }
 ```
 
-#### 2. Process Payment
+#### 3. Process Payment
 ```http
 POST /api/subscription/{id}/payment
 Authorization: Bearer {passenger_token}
@@ -141,7 +147,7 @@ Content-Type: application/json
 }
 ```
 
-#### 3. View Subscriptions (Active & History)
+#### 4. View Subscriptions (Active & History)
 ```http
 GET /api/passenger/{id}/subscriptions
 Authorization: Bearer {passenger_token}
@@ -170,7 +176,7 @@ Authorization: Bearer {admin_token}
 Content-Type: application/json
 
 {
-  "contract_type": "MONTHLY",
+  "contract_type": "INSTITUTIONAL",
   "base_price_per_km": 25.00,
   "discount_percentage": 10.00,
   "minimum_fare": 50.00
@@ -184,7 +190,7 @@ Content-Type: application/json
   "message": "Contract settings created successfully",
   "data": {
     "id": "uuid-here",
-    "contract_type": "MONTHLY",
+    "contract_type": "INSTITUTIONAL",
     "base_price_per_km": 25.00,
     "discount_percentage": 10.00,
     "minimum_fare": 50.00,
@@ -288,10 +294,9 @@ dailyFare = Math.max(fareAfterDiscount, minimum_fare)
 
 // 4. Apply contract type multiplier
 multipliers = {
-  DAILY: 1,
-  WEEKLY: 7,
-  MONTHLY: 30,
-  YEARLY: 365
+  INDIVIDUAL: 1,
+  GROUP: 7,
+  INSTITUTIONAL: 30
 }
 
 finalFare = dailyFare * multipliers[contract_type]
@@ -301,7 +306,7 @@ finalFare = dailyFare * multipliers[contract_type]
 - **Distance:** 6.25 km
 - **Base Price:** 25.00 ETB/km
 - **Discount:** 10%
-- **Contract Type:** MONTHLY
+- **Contract Type:** INSTITUTIONAL
 
 ```
 baseFare = 6.25 * 25.00 = 156.25 ETB
@@ -314,6 +319,7 @@ finalFare = 140.62 * 30 = 4,218.60 ETB
 ## API Endpoints Summary
 
 ### **Passenger Endpoints**
+- `GET /api/subscription/contracts` - Get available contracts
 - `POST /api/subscription/create` - Create subscription with fare estimation
 - `POST /api/subscription/:id/payment` - Process payment
 - `GET /api/passenger/:id/subscriptions` - View subscriptions

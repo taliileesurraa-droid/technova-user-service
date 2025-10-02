@@ -1,35 +1,39 @@
-const { Subscription, ContractSettings } = require("../models/indexModel");
+const { Subscription, Contract, ContractSettings } = require("../models/indexModel");
 const { asyncHandler } = require("../middleware/errorHandler");
 const { getPassengerById, getDriverById } = require("../utils/userService");
-const { calculateSubscriptionFare } = require("../services/subscriptionService");
+const { calculateSubscriptionFare, getAvailableContracts } = require("../services/subscriptionService");
 
 // POST /subscription/create - Create subscription with fare estimation
 exports.createSubscription = asyncHandler(async (req, res) => {
   const {
+    contract_id,
     pickup_location,
     dropoff_location,
     pickup_latitude,
     pickup_longitude,
     dropoff_latitude,
     dropoff_longitude,
-    contract_type,
     start_date,
     end_date,
   } = req.body;
 
   // Validate required fields
-  if (!pickup_location || !dropoff_location || !contract_type || !start_date || !end_date) {
+  if (!contract_id || !pickup_location || !dropoff_location || !start_date || !end_date) {
     return res.status(400).json({
       success: false,
-      message: "Missing required fields: pickup_location, dropoff_location, contract_type, start_date, end_date"
+      message: "Missing required fields: contract_id, pickup_location, dropoff_location, start_date, end_date"
     });
   }
 
-  // Validate contract type
-  if (!["DAILY", "WEEKLY", "MONTHLY", "YEARLY"].includes(contract_type)) {
-    return res.status(400).json({
+  // Validate contract exists and is active
+  const contract = await Contract.findOne({
+    where: { id: contract_id, status: 'ACTIVE' }
+  });
+
+  if (!contract) {
+    return res.status(404).json({
       success: false,
-      message: "Invalid contract_type. Must be one of: DAILY, WEEKLY, MONTHLY, YEARLY"
+      message: "Contract not found or not active"
     });
   }
 
@@ -45,7 +49,7 @@ exports.createSubscription = asyncHandler(async (req, res) => {
       pickup_longitude,
       dropoff_latitude,
       dropoff_longitude,
-      contract_type
+      contract.contract_type
     );
 
     if (!fareResult.success) {
@@ -54,6 +58,7 @@ exports.createSubscription = asyncHandler(async (req, res) => {
 
     // Create subscription with PENDING status
     const subscriptionData = {
+      contract_id: contract_id,
       passenger_id: passengerId,
       pickup_location,
       dropoff_location,
@@ -61,7 +66,7 @@ exports.createSubscription = asyncHandler(async (req, res) => {
       pickup_longitude: pickup_longitude || null,
       dropoff_latitude: dropoff_latitude || null,
       dropoff_longitude: dropoff_longitude || null,
-      contract_type,
+      contract_type: contract.contract_type,
       start_date,
       end_date,
       fare: fareResult.data.base_fare,
@@ -246,6 +251,34 @@ exports.getPassengerSubscriptions = asyncHandler(async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Error fetching passenger subscriptions",
+      error: error.message
+    });
+  }
+});
+
+// GET /subscription/contracts - Get available contracts for subscription
+exports.getAvailableContracts = asyncHandler(async (req, res) => {
+  const { contract_type } = req.query;
+
+  try {
+    const contractsResult = await getAvailableContracts(contract_type);
+    
+    if (!contractsResult.success) {
+      return res.status(500).json(contractsResult);
+    }
+
+    res.json({
+      success: true,
+      data: {
+        contracts: contractsResult.data,
+        total_count: contractsResult.data.length,
+        filter_applied: contract_type || null,
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Error fetching available contracts",
       error: error.message
     });
   }
