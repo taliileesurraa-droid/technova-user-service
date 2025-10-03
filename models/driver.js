@@ -30,6 +30,7 @@ module.exports = (sequelize, DataTypes) => {
       emergencyContacts: { type: DataTypes.TEXT, allowNull: true },
       documentStatus: { type: DataTypes.STRING, allowNull: true },
       status: { type: DataTypes.ENUM('pending', 'approved', 'rejected'), defaultValue: 'pending', allowNull: false },
+      sessionVersion: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
     },
     {
       tableName: 'drivers',

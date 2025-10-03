@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const morgan = require('morgan');
 const cors = require('cors');
 require('dotenv').config();
@@ -71,27 +71,44 @@ async function start() {
     // Check if main tables exist to determine sync strategy
     const qi = sequelize.getQueryInterface();
     const existingTables = await qi.showAllTables();
-    const hasMainTables = existingTables.some(table => 
-      ['admins', 'passengers', 'drivers', 'roles', 'permissions'].includes(table.tableName)
-    );
+    const tableNames = Array.isArray(existingTables)
+      ? existingTables.map(t => (typeof t === 'string' ? t : (t && (t.tableName || t.table_name)) || String(t)))
+      : [];
+    const lowerTableNames = tableNames.map(n => String(n).toLowerCase());
+    const hasMainTables = lowerTableNames.some(name => ['admins', 'passengers', 'drivers', 'roles', 'permissions', 'staff'].includes(name));
+
+    // Ensure required through tables exist (created by associations)
+    const requiredThroughTables = [
+      'passengerroles',
+      'driverroles',
+      'staffroles',
+      'adminroles',
+      'rolepermissions'
+    ];
+    const missingThroughTables = requiredThroughTables.filter(t => !lowerTableNames.includes(t));
     
-    if (hasMainTables) {
-      console.log('Main tables exist, skipping sync to avoid column conflicts...');
-      console.log('Database schema is ready!');
-    } else {
-      console.log('Fresh database detected, running initial sync...');
-      try {
-        await sequelize.sync({ alter: true });
-        console.log('Database synced!');
-      } catch (syncError) {
-        if (syncError.message.includes('Duplicate column name')) {
-          console.log('Some columns already exist, continuing with existing schema...');
-          await sequelize.sync({ force: false });
-          console.log('Database tables verified!');
-        } else {
-          throw syncError;
-        }
+    const isProduction = (process.env.NODE_ENV || '').toLowerCase() === 'production';
+    const syncMode = (process.env.DB_SYNC || '').toLowerCase(); // '', 'alter', 'force', 'none'
+
+    if (syncMode === 'force') {
+      console.log('DB_SYNC=force detected. Dropping and recreating all tables...');
+      await sequelize.sync({ force: true });
+      console.log('Database force-synced!');
+    } else if (syncMode === 'alter') {
+      console.log('DB_SYNC=alter detected. Altering tables to match models...');
+      await sequelize.sync({ alter: true });
+      console.log('Database alter-synced!');
+    } else if (!isProduction && (!hasMainTables || missingThroughTables.length > 0)) {
+      if (!hasMainTables) {
+        console.log('Fresh database detected in non-production, running initial alter sync...');
+      } else {
+        console.log('Missing association tables detected:', missingThroughTables.join(', ') || 'none');
+        console.log('Running targeted alter-sync to create missing through tables...');
       }
+      await sequelize.sync({ alter: true });
+      console.log('Database synced!');
+    } else {
+      console.log('Existing tables detected or production mode; skipping sync. Set DB_SYNC=alter or DB_SYNC=force to override.');
     }
 
     app.listen(port, () =>

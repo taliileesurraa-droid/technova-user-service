@@ -75,6 +75,19 @@ function socketAuth(socket, next) {
       carPlate,
       carColor
     };
+    // Enforce driver sessionVersion at socket layer
+    if (top.type === 'driver' && typeof top.sessionVersion !== 'undefined') {
+      try {
+        const { models } = require('../models');
+        // Note: socket middleware cannot be async easily; so perform sync-like check via promise then
+        // We will attach a flag and rely on downstream handlers to disconnect if mismatch
+        models.Driver.findByPk(top.id, { attributes: ['sessionVersion'] }).then((driver) => {
+          if (!driver || (driver.sessionVersion || 0) !== (top.sessionVersion || 0)) {
+            try { socket.disconnect(true); } catch (_) {}
+          }
+        }).catch(() => {});
+      } catch (_) {}
+    }
     socket.authToken = `Bearer ${token}`;
     return next();
   } catch (e) {
