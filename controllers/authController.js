@@ -160,9 +160,14 @@ exports.loginDriver = async (req, res) => {
 
       driver.verification = true;
       if (driver.status === 'pending') driver.status = 'active';
+      // Increment sessionVersion to invalidate other sessions
+      driver.sessionVersion = (driver.sessionVersion || 0) + 1;
       await driver.save();
 
-      const token = sign({ id: driver.id, driverId: driver.id, type: 'driver', ...buildBasicClaims(driver, 'driver') });
+      // Revoke existing refresh tokens for this driver
+      try { await models.RefreshToken.update({ revokedAt: new Date() }, { where: { userType: 'driver', userId: driver.id, revokedAt: null } }); } catch (_) {}
+
+      const token = sign({ id: driver.id, driverId: driver.id, type: 'driver', sessionVersion: driver.sessionVersion, ...buildBasicClaims(driver, 'driver') });
       return res.json({ token, driver });
     }
 
@@ -174,7 +179,14 @@ exports.loginDriver = async (req, res) => {
       const ok = await comparePassword(password, driver.password);
       if (!ok) return res.status(401).json({ message: 'Invalid credentials' });
 
-      const token = sign({ id: driver.id, driverId: driver.id, type: 'driver', paymentPreference: driver.paymentPreference || null, ...buildBasicClaims(driver, 'driver') });
+      // Increment sessionVersion to invalidate other sessions
+      driver.sessionVersion = (driver.sessionVersion || 0) + 1;
+      await driver.save();
+
+      // Revoke existing refresh tokens for this driver
+      try { await models.RefreshToken.update({ revokedAt: new Date() }, { where: { userType: 'driver', userId: driver.id, revokedAt: null } }); } catch (_) {}
+
+      const token = sign({ id: driver.id, driverId: driver.id, type: 'driver', sessionVersion: driver.sessionVersion, paymentPreference: driver.paymentPreference || null, ...buildBasicClaims(driver, 'driver') });
       const { password: _pw, ...safeDriver } = driver.toJSON ? driver.toJSON() : driver;
       return res.json({ token, driver: safeDriver });
     }
