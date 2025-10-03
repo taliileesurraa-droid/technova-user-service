@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const morgan = require('morgan');
 const cors = require('cors');
 require('dotenv').config();
@@ -71,9 +71,10 @@ async function start() {
     // Check if main tables exist to determine sync strategy
     const qi = sequelize.getQueryInterface();
     const existingTables = await qi.showAllTables();
-    const hasMainTables = existingTables.some(table => 
-      ['admins', 'passengers', 'drivers', 'roles', 'permissions'].includes(table.tableName)
-    );
+    const tableNames = Array.isArray(existingTables)
+      ? existingTables.map(t => (typeof t === 'string' ? t : (t && (t.tableName || t.table_name)) || String(t)))
+      : [];
+    const hasMainTables = tableNames.some(name => ['admins', 'passengers', 'drivers', 'roles', 'permissions', 'staff'].includes(name));
     
     if (hasMainTables) {
       console.log('Main tables exist, skipping sync to avoid column conflicts...');
