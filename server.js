@@ -74,15 +74,31 @@ async function start() {
     const tableNames = Array.isArray(existingTables)
       ? existingTables.map(t => (typeof t === 'string' ? t : (t && (t.tableName || t.table_name)) || String(t)))
       : [];
-    const hasMainTables = tableNames.some(name => ['admins', 'passengers', 'drivers', 'roles', 'permissions', 'staff'].includes(name));
+    const lowerTableNames = tableNames.map(n => String(n).toLowerCase());
+    const hasMainTables = lowerTableNames.some(name => ['admins', 'passengers', 'drivers', 'roles', 'permissions', 'staff'].includes(name));
+
+    // Ensure required through tables exist (created by associations)
+    const requiredThroughTables = [
+      'passengerroles',
+      'driverroles',
+      'staffroles',
+      'adminroles',
+      'rolepermissions'
+    ];
+    const missingThroughTables = requiredThroughTables.filter(t => !lowerTableNames.includes(t));
     
     const isProduction = (process.env.NODE_ENV || '').toLowerCase() === 'production';
-    if (hasMainTables || isProduction) {
-      console.log('Existing tables detected or production mode; skipping alter-sync.');
-    } else {
-      console.log('Fresh database detected in non-production, running initial sync...');
+    if (!isProduction && (!hasMainTables || missingThroughTables.length > 0)) {
+      if (!hasMainTables) {
+        console.log('Fresh database detected in non-production, running initial sync...');
+      } else {
+        console.log('Missing association tables detected:', missingThroughTables.join(', ') || 'none');
+        console.log('Running targeted alter-sync to create missing through tables...');
+      }
       await sequelize.sync({ alter: true });
       console.log('Database synced!');
+    } else {
+      console.log('Existing tables detected or production mode; skipping alter-sync.');
     }
 
     app.listen(port, () =>
