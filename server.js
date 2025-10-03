@@ -76,23 +76,13 @@ async function start() {
       : [];
     const hasMainTables = tableNames.some(name => ['admins', 'passengers', 'drivers', 'roles', 'permissions', 'staff'].includes(name));
     
-    if (hasMainTables) {
-      console.log('Main tables exist, skipping sync to avoid column conflicts...');
-      console.log('Database schema is ready!');
+    const isProduction = (process.env.NODE_ENV || '').toLowerCase() === 'production';
+    if (hasMainTables || isProduction) {
+      console.log('Existing tables detected or production mode; skipping alter-sync.');
     } else {
-      console.log('Fresh database detected, running initial sync...');
-      try {
-        await sequelize.sync({ alter: true });
-        console.log('Database synced!');
-      } catch (syncError) {
-        if (syncError.message.includes('Duplicate column name')) {
-          console.log('Some columns already exist, continuing with existing schema...');
-          await sequelize.sync({ force: false });
-          console.log('Database tables verified!');
-        } else {
-          throw syncError;
-        }
-      }
+      console.log('Fresh database detected in non-production, running initial sync...');
+      await sequelize.sync({ alter: true });
+      console.log('Database synced!');
     }
 
     app.listen(port, () =>
