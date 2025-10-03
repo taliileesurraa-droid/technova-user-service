@@ -25,6 +25,11 @@ function buildBasicClaims(entity, type) {
       if (typeof entity.vehicleType !== 'undefined') claims.vehicleType = entity.vehicleType;
       if (typeof entity.carName !== 'undefined') claims.carName = entity.carName;
       if (typeof entity.carPlate !== 'undefined') claims.carPlate = entity.carPlate;
+      if (typeof entity.carModel !== 'undefined') claims.carModel = entity.carModel;
+      if (typeof entity.carColor !== 'undefined') claims.carColor = entity.carColor;
+      if (typeof entity.availability !== 'undefined') claims.availability = entity.availability;
+      if (typeof entity.rating !== 'undefined') claims.rating = entity.rating;
+      if (typeof entity.rewardPoints !== 'undefined') claims.rewardPoints = entity.rewardPoints;
     } else if (type === 'staff') {
       if (entity.fullName) claims.name = entity.fullName;
       if (entity.username) claims.username = entity.username;
@@ -239,7 +244,12 @@ exports.verifyDriverOtp = async (req, res) => {
     if (driver.status === 'pending') driver.status = 'active';
     await driver.save();
 
-    const token = sign({ id: driver.id, type: 'driver', paymentPreference: driver.paymentPreference || null, ...buildBasicClaims(driver, 'driver') });
+    // Increment sessionVersion and revoke refresh tokens to ensure single-session
+    driver.sessionVersion = (driver.sessionVersion || 0) + 1;
+    await driver.save();
+    try { await models.RefreshToken.update({ revokedAt: new Date() }, { where: { userType: 'driver', userId: driver.id, revokedAt: null } }); } catch (_) {}
+
+    const token = sign({ id: driver.id, driverId: driver.id, type: 'driver', sessionVersion: driver.sessionVersion, paymentPreference: driver.paymentPreference || null, ...buildBasicClaims(driver, 'driver') });
     return res.status(200).json({ message: 'OTP verified successfully', driver, token });
   } catch (e) {
     return res.status(500).json({ message: e.message });
