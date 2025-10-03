@@ -3,7 +3,7 @@ const { models } = require('../models');
 require('dotenv').config();
 
 function auth(required = true) {
-return (req, res, next) => {
+return async (req, res, next) => {
 const header = req.headers.authorization || '';
 const bearer = header.startsWith('Bearer ') ? header.slice(7) : null;
 // Prefer Authorization header over query/body tokens to avoid accidental overrides
