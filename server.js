@@ -88,9 +88,19 @@ async function start() {
     const missingThroughTables = requiredThroughTables.filter(t => !lowerTableNames.includes(t));
     
     const isProduction = (process.env.NODE_ENV || '').toLowerCase() === 'production';
-    if (!isProduction && (!hasMainTables || missingThroughTables.length > 0)) {
+    const syncMode = (process.env.DB_SYNC || '').toLowerCase(); // '', 'alter', 'force', 'none'
+
+    if (syncMode === 'force') {
+      console.log('DB_SYNC=force detected. Dropping and recreating all tables...');
+      await sequelize.sync({ force: true });
+      console.log('Database force-synced!');
+    } else if (syncMode === 'alter') {
+      console.log('DB_SYNC=alter detected. Altering tables to match models...');
+      await sequelize.sync({ alter: true });
+      console.log('Database alter-synced!');
+    } else if (!isProduction && (!hasMainTables || missingThroughTables.length > 0)) {
       if (!hasMainTables) {
-        console.log('Fresh database detected in non-production, running initial sync...');
+        console.log('Fresh database detected in non-production, running initial alter sync...');
       } else {
         console.log('Missing association tables detected:', missingThroughTables.join(', ') || 'none');
         console.log('Running targeted alter-sync to create missing through tables...');
@@ -98,7 +108,7 @@ async function start() {
       await sequelize.sync({ alter: true });
       console.log('Database synced!');
     } else {
-      console.log('Existing tables detected or production mode; skipping alter-sync.');
+      console.log('Existing tables detected or production mode; skipping sync. Set DB_SYNC=alter or DB_SYNC=force to override.');
     }
 
     app.listen(port, () =>
