@@ -17,11 +17,20 @@ const paymentUploader = createUploader({
   maxFileSizeMB: 5,
 });
 
+// Helper to map first uploaded file (from any field name) to req.file
+function mapFirstFile(req, _res, next) {
+  if (!req.file && Array.isArray(req.files) && req.files.length > 0) {
+    req.file = req.files[0];
+  }
+  next();
+}
+
 // Admin: full access, Passenger: create & read their own
 router.post(
   "/",
   authorize("admin", "passenger"),
-  paymentUploader.single("receipt_image"),
+  paymentUploader.any(),
+  mapFirstFile,
   controller.createPayment
 );
 
@@ -32,10 +41,16 @@ router.get("/:id", authorize("admin", "passenger"), controller.getPayment);
 router.put(
   "/:id",
   authorize("admin"),
-  paymentUploader.single("receipt_image"),
+  paymentUploader.any(),
+  mapFirstFile,
   controller.updatePayment
 );
 
 router.delete("/:id", authorize("admin"), controller.deletePayment);
+
+// Admin approval routes
+router.get("/pending", authorize("admin"), controller.getPendingPayments);
+router.patch("/:id/approve", authorize("admin"), controller.approvePayment);
+router.patch("/:id/reject", authorize("admin"), controller.rejectPayment);
 
 module.exports = router;

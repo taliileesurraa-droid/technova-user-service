@@ -34,7 +34,20 @@ const authorize = (...allowedTypes) => {
         .json({ message: "Forbidden: No user information found." });
     }
 
-    const userType = req.user.type;
+    // Infer user type from token if missing or inconsistent
+    let userType = req.user.type;
+    if (!userType && Array.isArray(req.user.roles)) {
+      const roleNames = req.user.roles.map(r => (typeof r === 'object' ? r.name : r));
+      if (roleNames.includes('driver')) userType = 'driver';
+      else if (roleNames.includes('passenger')) userType = 'passenger';
+      else if (roleNames.includes('admin') || roleNames.includes('superadmin')) userType = 'admin';
+      req.user.type = userType;
+    }
+
+    // If an endpoint allows admin, also allow superadmin
+    if (allowedTypes.includes("admin") && (userType === "admin" || userType === "superadmin")) {
+      return next();
+    }
 
     // For superadmin, we need to check the roles array
     if (

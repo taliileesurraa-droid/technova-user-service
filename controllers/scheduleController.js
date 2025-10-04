@@ -1,5 +1,6 @@
 const { RideSchedule } = require("../models/indexModel");
 const { asyncHandler } = require("../middleware/errorHandler");
+const { getDriverById } = require("../utils/userService");
 
 // CREATE
 exports.createRideSchedule = asyncHandler(async (req, res) => {
@@ -19,7 +20,28 @@ exports.getRideSchedules = asyncHandler(async (req, res) => {
     where: whereClause,
     include: [{ association: "contract" }],
   });
-  res.json({ success: true, data: schedules });
+  const list = schedules.map(s => s.toJSON());
+  const uniqueDriverIds = [...new Set(list.map(s => s.driver_id).filter(Boolean))];
+  const authHeader = req.headers && req.headers.authorization ? { headers: { Authorization: req.headers.authorization } } : {};
+  const driverInfoMap = new Map();
+  await Promise.all(uniqueDriverIds.map(async (did) => {
+    try {
+      const info = await getDriverById(did, authHeader);
+      if (info) driverInfoMap.set(did, info);
+    } catch (_) {}
+  }));
+
+  const enriched = list.map(s => {
+    const info = driverInfoMap.get(s.driver_id);
+    if (!info) return s;
+    return {
+      ...s,
+      driver_name: info.name || null,
+      driver_phone: info.phone || null,
+      driver_email: info.email || null,
+    };
+  });
+  res.json({ success: true, data: enriched });
 });
 
 // READ one - Admin sees all, Driver sees only their assigned schedules
@@ -37,7 +59,19 @@ exports.getRideSchedule = asyncHandler(async (req, res) => {
     return res.status(403).json({ success: false, message: "Access denied" });
   }
 
-  res.json({ success: true, data: schedule });
+  const sch = schedule.toJSON();
+  try {
+    if (sch.driver_id) {
+      const authHeader = req.headers && req.headers.authorization ? { headers: { Authorization: req.headers.authorization } } : {};
+      const info = await getDriverById(sch.driver_id, authHeader);
+      if (info) {
+        sch.driver_name = info.name || null;
+        sch.driver_phone = info.phone || null;
+        sch.driver_email = info.email || null;
+      }
+    }
+  } catch (_) {}
+  res.json({ success: true, data: sch });
 });
 
 // UPDATE - Admin can update all, Driver can only update status of their assigned schedules

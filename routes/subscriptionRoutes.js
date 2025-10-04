@@ -1,10 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const { authenticate, authorize } = require("../middleware/auth");
+const { authorize } = require("../middleware/auth");
 const controller = require("../controllers/subscriptionController");
 const { validateContractDates } = require("../middleware/dateValidation");
-
-router.use(authenticate);
 
 router.post(
   "/",

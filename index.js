@@ -5,11 +5,13 @@ require("dotenv").config();
 const { createDatabase } = require("./config/dbconfig.js");
 const { syncDB } = require("./models/indexModel.js");
 const { errorHandler, notFound } = require("./middleware/errorHandler.js");
+const logger = require("./middleware/logger.js");
 
 const PORT = process.env.PORT
 const routes = require("./routes/indexRoutes.js");
 
 const app = express();
+app.use(logger); // Add logger middleware first
 app.use(express.json());
 
 const corsOptions = {

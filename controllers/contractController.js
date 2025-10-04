@@ -1,5 +1,6 @@
 const { Contract, Discount, Subscription } = require("../models/indexModel");
 const { asyncHandler } = require("../middleware/errorHandler");
+const { getPassengerById, getDriverById } = require("../utils/userService");
 
 // Helper function to find an active discount.
 const findActiveDiscount = async (discountId) => {
@@ -97,7 +98,44 @@ exports.getContracts = asyncHandler(async (req, res) => {
     where: whereClause,
     include: ["discount", "subscriptions", "payments", "ride_schedules"],
   });
-  res.json({ success: true, data: contracts });
+  const list = contracts.map(c => c.toJSON());
+  const passengerIds = new Set();
+  const driverIds = new Set();
+  list.forEach(c => {
+    (c.subscriptions || []).forEach(s => { if (s.passenger_id) passengerIds.add(s.passenger_id); });
+    (c.ride_schedules || []).forEach(r => { if (r.driver_id) driverIds.add(r.driver_id); });
+    (c.payments || []).forEach(p => { if (p.passenger_id) passengerIds.add(p.passenger_id); });
+  });
+  const authHeader = req.headers && req.headers.authorization ? { headers: { Authorization: req.headers.authorization } } : {};
+  const passengerMap = new Map();
+  const driverMap = new Map();
+  await Promise.all([
+    ...[...passengerIds].map(async pid => { try { const info = await getPassengerById(pid, authHeader); if (info) passengerMap.set(pid, info); } catch(_){} }),
+    ...[...driverIds].map(async did => { try { const info = await getDriverById(did, authHeader); if (info) driverMap.set(did, info); } catch(_){} }),
+  ]);
+
+  const enriched = list.map(c => ({
+    ...c,
+    subscriptions: (c.subscriptions || []).map(s => ({
+      ...s,
+      passenger_name: passengerMap.get(s.passenger_id)?.name || null,
+      passenger_phone: passengerMap.get(s.passenger_id)?.phone || null,
+      passenger_email: passengerMap.get(s.passenger_id)?.email || null,
+    })),
+    payments: (c.payments || []).map(p => ({
+      ...p,
+      passenger_name: passengerMap.get(p.passenger_id)?.name || null,
+      passenger_phone: passengerMap.get(p.passenger_id)?.phone || null,
+      passenger_email: passengerMap.get(p.passenger_id)?.email || null,
+    })),
+    ride_schedules: (c.ride_schedules || []).map(r => ({
+      ...r,
+      driver_name: driverMap.get(r.driver_id)?.name || null,
+      driver_phone: driverMap.get(r.driver_id)?.phone || null,
+      driver_email: driverMap.get(r.driver_id)?.email || null,
+    })),
+  }));
+  res.json({ success: true, data: enriched });
 });
 
 // READ one - Admin sees all, Passenger sees only their own
@@ -122,7 +160,40 @@ exports.getContract = asyncHandler(async (req, res) => {
     }
   }
 
-  res.json({ success: true, data: contract });
+  const c = contract.toJSON();
+  const passengerIds = new Set();
+  const driverIds = new Set();
+  (c.subscriptions || []).forEach(s => { if (s.passenger_id) passengerIds.add(s.passenger_id); });
+  (c.ride_schedules || []).forEach(r => { if (r.driver_id) driverIds.add(r.driver_id); });
+  (c.payments || []).forEach(p => { if (p.passenger_id) passengerIds.add(p.passenger_id); });
+  const authHeader = req.headers && req.headers.authorization ? { headers: { Authorization: req.headers.authorization } } : {};
+  const [passengerMapEntries, driverMapEntries] = await Promise.all([
+    Promise.all([...passengerIds].map(async pid => { try { const info = await getPassengerById(pid, authHeader); return [pid, info]; } catch(_) { return [pid, null]; } })),
+    Promise.all([...driverIds].map(async did => { try { const info = await getDriverById(did, authHeader); return [did, info]; } catch(_) { return [did, null]; } })),
+  ]);
+  const passengerMap = new Map(passengerMapEntries.filter(([,v]) => v));
+  const driverMap = new Map(driverMapEntries.filter(([,v]) => v));
+
+  c.subscriptions = (c.subscriptions || []).map(s => ({
+    ...s,
+    passenger_name: passengerMap.get(s.passenger_id)?.name || null,
+    passenger_phone: passengerMap.get(s.passenger_id)?.phone || null,
+    passenger_email: passengerMap.get(s.passenger_id)?.email || null,
+  }));
+  c.payments = (c.payments || []).map(p => ({
+    ...p,
+    passenger_name: passengerMap.get(p.passenger_id)?.name || null,
+    passenger_phone: passengerMap.get(p.passenger_id)?.phone || null,
+    passenger_email: passengerMap.get(p.passenger_id)?.email || null,
+  }));
+  c.ride_schedules = (c.ride_schedules || []).map(r => ({
+    ...r,
+    driver_name: driverMap.get(r.driver_id)?.name || null,
+    driver_phone: driverMap.get(r.driver_id)?.phone || null,
+    driver_email: driverMap.get(r.driver_id)?.email || null,
+  }));
+
+  res.json({ success: true, data: c });
 });
 
 // NEW: Get only ACTIVE contracts

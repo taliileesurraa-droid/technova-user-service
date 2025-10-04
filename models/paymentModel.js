@@ -10,12 +10,26 @@ const Payment = sequelize.define(
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
     },
+    subscription_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: { model: "subscriptions", key: "id" },
+      onUpdate: "CASCADE",
+      onDelete: "SET NULL",
+    },
     contract_id: {
       type: DataTypes.UUID,
-      allowNull: false,
+      allowNull: true,
+      references: { model: "contracts", key: "id" },
+      onUpdate: "CASCADE",
+      onDelete: "SET NULL",
     },
     passenger_id: {
       type: DataTypes.UUID,
+      allowNull: false,
+    },
+    amount: {
+      type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
     },
     payment_method: {
@@ -34,6 +48,22 @@ const Payment = sequelize.define(
     status: {
       type: DataTypes.ENUM("SUCCESS", "FAILED", "PENDING"),
       defaultValue: "PENDING",
+    },
+    admin_approved: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    approved_by: {
+      type: DataTypes.UUID,
+      allowNull: true,
+    },
+    approved_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    rejection_reason: {
+      type: DataTypes.TEXT,
+      allowNull: true,
     },
   },
   {
