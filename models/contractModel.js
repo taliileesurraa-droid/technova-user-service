@@ -26,7 +26,7 @@ const Contract = sequelize.define(
     },
     contract_type_id: {
       type: DataTypes.UUID,
-      allowNull: false,
+      allowNull: true, // Temporarily allow null for migration
       references: {
         model: "contract_types",
         key: "id",

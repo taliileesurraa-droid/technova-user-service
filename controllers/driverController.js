@@ -282,7 +282,15 @@ exports.getDriverSchedule = asyncHandler(async (req, res) => {
 
   // Check if user can access this driver's data
   if (req.user.type === "driver" && req.user.id !== driverId) {
-    return res.status(403).json({ success: false, message: "Access denied" });
+    return res.status(403).json({ 
+      success: false, 
+      message: "Access denied",
+      debug: {
+        userType: req.user.type,
+        userId: req.user.id,
+        requestedDriverId: driverId
+      }
+    });
   }
 
   // Get upcoming trips (scheduled or in progress)

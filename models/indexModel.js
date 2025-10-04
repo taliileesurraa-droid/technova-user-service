@@ -145,6 +145,9 @@ const syncDB = async () => {
     await Discount.sync({ alter: true });
     console.log("✅ Discount table synced successfully!");
 
+    await ContractType.sync({ alter: true });
+    console.log("✅ ContractType table synced successfully!");
+
     await Contract.sync({ alter: true });
     console.log("✅ Contract table synced successfully!");
 
@@ -168,9 +171,6 @@ const syncDB = async () => {
 
     await ContractSettings.sync({ alter: true });
     console.log("✅ ContractSettings table synced successfully!");
-
-    await ContractType.sync({ alter: true });
-    console.log("✅ ContractType table synced successfully!");
 
     console.log("✅ All Contract Service tables synced successfully!");
   } catch (error) {

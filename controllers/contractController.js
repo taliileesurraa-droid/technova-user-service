@@ -15,20 +15,25 @@ exports.createContract = asyncHandler(async (req, res) => {
   const { cost, has_discount, discount_id, contract_type_id } = req.body;
   
   // Validate contract type exists
-  if (contract_type_id) {
-    const contractType = await ContractType.findByPk(contract_type_id);
-    if (!contractType) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid contract type ID"
-      });
-    }
-    if (!contractType.is_active) {
-      return res.status(400).json({
-        success: false,
-        message: "Contract type is not active"
-      });
-    }
+  if (!contract_type_id) {
+    return res.status(400).json({
+      success: false,
+      message: "Contract type ID is required"
+    });
+  }
+
+  const contractType = await ContractType.findByPk(contract_type_id);
+  if (!contractType) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid contract type ID"
+    });
+  }
+  if (!contractType.is_active) {
+    return res.status(400).json({
+      success: false,
+      message: "Contract type is not active"
+    });
   }
 
   let finalCost = parseFloat(cost);
@@ -245,10 +250,10 @@ exports.getActiveContracts = asyncHandler(async (req, res) => {
 
 // NEW: Get contracts by contract type ID
 exports.getContractsByType = asyncHandler(async (req, res) => {
-  const { typeId } = req.params;
+  const { contractId } = req.params;
   
   // Validate contract type exists
-  const contractType = await ContractType.findByPk(typeId);
+  const contractType = await ContractType.findByPk(contractId);
   if (!contractType) {
     return res.status(404).json({
       success: false,
@@ -257,7 +262,7 @@ exports.getContractsByType = asyncHandler(async (req, res) => {
   }
 
   const contracts = await Contract.findAll({
-    where: { contract_type_id: typeId },
+    where: { contract_type_id: contractId },
     include: [
       "discount", 
       "subscriptions", 

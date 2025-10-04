@@ -19,6 +19,13 @@ exports.createSubscription = asyncHandler(async (req, res) => {
     end_date,
   } = req.body;
 
+  // Debug user information
+  console.log("User info:", {
+    id: req.user.id,
+    type: req.user.type,
+    roles: req.user.roles
+  });
+
   // Validate required fields
   if (!contract_id || !pickup_location || !dropoff_location || !start_date || !end_date) {
     return res.status(400).json({

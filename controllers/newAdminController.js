@@ -1,108 +1,93 @@
-const { ContractSettings, Subscription, Payment, Trip, TripSchedule } = require("../models/indexModel");
+const { ContractSettings, Subscription, Payment, Trip, TripSchedule, Contract, ContractType } = require("../models/indexModel");
 const { asyncHandler } = require("../middleware/errorHandler");
 const { getDriverById, getPassengerById } = require("../utils/userService");
 const { approvePayment, rejectPayment, getPendingPayments } = require("./paymentController");
 const { getUserInfo } = require("../utils/tokenHelper");
 
-// POST /admin/contract/settings - Set contract base price per km and discounts
-exports.setContractSettings = asyncHandler(async (req, res) => {
-  const {
-    contract_type,
-    base_price_per_km,
-    discount_percentage = 0,
-    minimum_fare = 0,
-  } = req.body;
-
-  // Validate required fields
-  if (!contract_type || !base_price_per_km) {
-    return res.status(400).json({
-      success: false,
-      message: "contract_type and base_price_per_km are required"
-    });
-  }
-
-  // Validate contract type
-  if (!["INDIVIDUAL", "GROUP", "INSTITUTIONAL"].includes(contract_type)) {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid contract_type. Must be one of: INDIVIDUAL, GROUP, INSTITUTIONAL"
-    });
-  }
-
-  // Validate numeric values
-  if (isNaN(base_price_per_km) || parseFloat(base_price_per_km) < 0) {
-    return res.status(400).json({
-      success: false,
-      message: "base_price_per_km must be a positive number"
-    });
-  }
-
-  if (isNaN(discount_percentage) || parseFloat(discount_percentage) < 0 || parseFloat(discount_percentage) > 100) {
-    return res.status(400).json({
-      success: false,
-      message: "discount_percentage must be between 0 and 100"
-    });
-  }
-
+// POST /admin/contracts/sample - Create sample contracts for testing
+exports.createSampleContracts = asyncHandler(async (req, res) => {
   try {
-    // Check if settings already exist for this contract type
-    const existingSettings = await ContractSettings.findOne({
-      where: { contract_type }
+    console.log("🚀 Creating sample contracts...");
+
+    // Get all active contract types
+    const contractTypes = await ContractType.findAll({
+      where: { is_active: true }
     });
 
-    let settings;
-    if (existingSettings) {
-      // Update existing settings
-      await existingSettings.update({
-        base_price_per_km: parseFloat(base_price_per_km),
-        discount_percentage: parseFloat(discount_percentage),
-        minimum_fare: parseFloat(minimum_fare),
-        is_active: true,
-        created_by: req.user.id,
-      });
-      settings = existingSettings;
-    } else {
-      // Create new settings
-      settings = await ContractSettings.create({
-        contract_type,
-        base_price_per_km: parseFloat(base_price_per_km),
-        discount_percentage: parseFloat(discount_percentage),
-        minimum_fare: parseFloat(minimum_fare),
-        is_active: true,
-        created_by: req.user.id,
+    if (contractTypes.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No contract types found. Please create contract types first."
       });
     }
 
-    res.status(existingSettings ? 200 : 201).json({
+    console.log(`📋 Found ${contractTypes.length} contract types`);
+
+    // Create sample contracts for each contract type
+    const sampleContracts = [];
+
+    for (const contractType of contractTypes) {
+      // Create 2 sample contracts per type
+      const contractsToCreate = [
+        {
+          contract_type_id: contractType.id,
+          start_date: "2024-01-01",
+          end_date: "2024-12-31",
+          pickup_location: "Bole International Airport",
+          dropoff_location: "Addis Ababa University",
+          cost: parseFloat(contractType.base_price_per_km) * 10, // Sample cost
+          status: "ACTIVE"
+        },
+        {
+          contract_type_id: contractType.id,
+          start_date: "2024-01-01",
+          end_date: "2024-12-31",
+          pickup_location: "Mercato",
+          dropoff_location: "Bole",
+          cost: parseFloat(contractType.base_price_per_km) * 8, // Sample cost
+          status: "ACTIVE"
+        }
+      ];
+
+      for (const contractData of contractsToCreate) {
+        try {
+          const contract = await Contract.create(contractData);
+          sampleContracts.push(contract);
+          console.log(`✅ Created contract for ${contractType.name}: ${contract.id}`);
+        } catch (error) {
+          console.error(`❌ Error creating contract for ${contractType.name}:`, error.message);
+        }
+      }
+    }
+
+    console.log(`✅ Created ${sampleContracts.length} sample contracts`);
+    
+    // Show summary
+    const summary = [];
+    for (const contractType of contractTypes) {
+      const contractsForType = await Contract.count({
+        where: { contract_type_id: contractType.id }
+      });
+      summary.push({
+        contract_type: contractType.name,
+        contract_count: contractsForType
+      });
+    }
+
+    res.status(201).json({
       success: true,
-      message: `Contract settings ${existingSettings ? 'updated' : 'created'} successfully`,
-      data: settings
+      message: `Created ${sampleContracts.length} sample contracts`,
+      data: {
+        contracts_created: sampleContracts.length,
+        summary: summary
+      }
     });
+
   } catch (error) {
+    console.error("❌ Error creating sample contracts:", error);
     return res.status(500).json({
       success: false,
-      message: "Error setting contract settings",
-      error: error.message
-    });
-  }
-});
-
-// GET /admin/contract/settings - Get all contract settings
-exports.getContractSettings = asyncHandler(async (req, res) => {
-  try {
-    const settings = await ContractSettings.findAll({
-      where: { is_active: true },
-      order: [['contract_type', 'ASC']],
-    });
-
-    res.json({
-      success: true,
-      data: settings
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Error fetching contract settings",
+      message: "Error creating sample contracts",
       error: error.message
     });
   }

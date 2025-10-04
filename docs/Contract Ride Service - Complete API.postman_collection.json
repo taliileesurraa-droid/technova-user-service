@@ -143,15 +143,9 @@
 							}
 						],
 						"url": {
-							"raw": "{{baseUrl}}/subscription/contracts?contract_type=INSTITUTIONAL",
+							"raw": "{{baseUrl}}/contract-types/active",
 							"host": ["{{baseUrl}}"],
-							"path": ["subscription", "contracts"],
-							"query": [
-								{
-									"key": "contract_type",
-									"value": "INSTITUTIONAL"
-								}
-							]
+							"path": ["contract-types", "active"]
 						}
 					},
 					"response": [
@@ -166,9 +160,9 @@
 									}
 								],
 								"url": {
-									"raw": "{{baseUrl}}/subscription/contracts",
+									"raw": "{{baseUrl}}/contract-types/active",
 									"host": ["{{baseUrl}}"],
-									"path": ["subscription", "contracts"]
+									"path": ["contract-types", "active"]
 								}
 							},
 							"status": "OK",
@@ -181,7 +175,7 @@
 								}
 							],
 							"cookie": [],
-							"body": "{\n  \"success\": true,\n  \"data\": {\n    \"contracts\": [\n      {\n        \"id\": \"contract-uuid-1\",\n        \"has_discount\": true,\n        \"contract_type\": \"INDIVIDUAL\",\n        \"status\": \"ACTIVE\"\n      },\n      {\n        \"id\": \"contract-uuid-2\",\n        \"has_discount\": false,\n        \"contract_type\": \"INSTITUTIONAL\",\n        \"status\": \"ACTIVE\"\n      }\n    ],\n    \"total_count\": 2\n  }\n}"
+							"body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"ct-uuid-1\",\n      \"name\": \"Individual\",\n      \"description\": \"Standard individual contract\",\n      \"base_price_per_km\": \"12.50\",\n      \"discount_percentage\": \"5.00\",\n      \"minimum_fare\": \"40.00\",\n      \"maximum_passengers\": 1,\n      \"features\": {\n        \"wifi\": false,\n        \"ac\": true\n      },\n      \"is_active\": true\n    },\n    {\n      \"id\": \"ct-uuid-2\",\n      \"name\": \"Group\",\n      \"description\": \"Group contract for multiple passengers\",\n      \"base_price_per_km\": \"10.00\",\n      \"discount_percentage\": \"15.00\",\n      \"minimum_fare\": \"35.00\",\n      \"maximum_passengers\": 8,\n      \"features\": {\n        \"wifi\": true,\n        \"ac\": true,\n        \"group_discount\": true\n      },\n      \"is_active\": true\n    }\n  ]\n}"
 						}
 					]
 				},
@@ -1196,27 +1190,19 @@
 					"response": []
 				},
 				{
-					"name": "Set Contract Settings",
+					"name": "Create Sample Contracts",
 					"request": {
 						"method": "POST",
 						"header": [
 							{
 								"key": "Authorization",
 								"value": "Bearer {{authToken}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
 							}
 						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"contract_type\": \"INSTITUTIONAL\",\n  \"base_price_per_km\": 25.00,\n  \"discount_percentage\": 10.00,\n  \"minimum_fare\": 50.00\n}"
-						},
 						"url": {
-							"raw": "{{baseUrl}}/admin/contract/settings",
+							"raw": "{{baseUrl}}/admin/contracts/sample",
 							"host": ["{{baseUrl}}"],
-							"path": ["admin", "contract", "settings"]
+							"path": ["admin", "contracts", "sample"]
 						}
 					},
 					"response": [
@@ -1228,24 +1214,16 @@
 									{
 										"key": "Authorization",
 										"value": "Bearer {{authToken}}"
-									},
-									{
-										"key": "Content-Type",
-										"value": "application/json"
 									}
 								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"contract_type\": \"INSTITUTIONAL\",\n  \"base_price_per_km\": 25.00,\n  \"discount_percentage\": 10.00,\n  \"minimum_fare\": 50.00\n}"
-								},
 								"url": {
-									"raw": "{{baseUrl}}/admin/contract/settings",
+									"raw": "{{baseUrl}}/admin/contracts/sample",
 									"host": ["{{baseUrl}}"],
-									"path": ["admin", "contract", "settings"]
+									"path": ["admin", "contracts", "sample"]
 								}
 							},
-							"status": "OK",
-							"code": 200,
+							"status": "Created",
+							"code": 201,
 							"_postman_previewlanguage": "json",
 							"header": [
 								{
@@ -1254,7 +1232,7 @@
 								}
 							],
 							"cookie": [],
-							"body": "{\n  \"success\": true,\n  \"message\": \"Contract settings created successfully\",\n  \"data\": {\n    \"id\": \"uuid-here\",\n    \"contract_type\": \"INSTITUTIONAL\",\n    \"base_price_per_km\": 25.00,\n    \"discount_percentage\": 10.00,\n    \"minimum_fare\": 50.00,\n    \"is_active\": true\n  }\n}"
+							"body": "{\n  \"success\": true,\n  \"message\": \"Created 12 sample contracts\",\n  \"data\": {\n    \"contracts_created\": 12,\n    \"summary\": [\n      {\n        \"contract_type\": \"GROUP\",\n        \"contract_count\": 2\n      },\n      {\n        \"contract_type\": \"INDIVIDUAL\",\n        \"contract_count\": 2\n      },\n      {\n        \"contract_type\": \"INSTITUTIONAL\",\n        \"contract_count\": 2\n      },\n      {\n        \"contract_type\": \"Institutionial contract\",\n        \"contract_count\": 2\n      },\n      {\n        \"contract_type\": \"Premium Individual\",\n        \"contract_count\": 2\n      },\n      {\n        \"contract_type\": \"student contract\",\n        \"contract_count\": 2\n      }\n    ]\n  }\n}"
 						}
 					]
 				},

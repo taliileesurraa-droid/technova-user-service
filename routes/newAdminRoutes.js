@@ -4,8 +4,7 @@ const controller = require("../controllers/newAdminController");
 const { authorize } = require("../middleware/auth");
 
 // Admin-only routes for contract settings and driver assignment
-router.post("/contract/settings", authorize("admin"), controller.setContractSettings);
-router.get("/contract/settings", authorize("admin"), controller.getContractSettings);
+router.post("/contracts/sample", authorize("admin"), controller.createSampleContracts);
 router.post("/subscription/:id/assign-driver", authorize("admin"), controller.assignDriverToSubscription);
 router.post("/subscription/passenger/:passengerId/assign-driver", authorize("admin"), async (req, res, next) => {
   // proxy to same controller, passing passenger_id and a dummy id

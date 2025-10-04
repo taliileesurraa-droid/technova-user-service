@@ -4,6 +4,7 @@ const cors = require("cors");
 require("dotenv").config();
 const { createDatabase } = require("./config/dbconfig.js");
 const { syncDB } = require("./models/indexModel.js");
+const { migrateContractTypes } = require("./utils/migrateContractTypes.js");
 const { errorHandler, notFound } = require("./middleware/errorHandler.js");
 const logger = require("./middleware/logger.js");
 
@@ -43,6 +44,9 @@ const startServer = async () => {
       "Attempting to connect to database and create if not exists..."
     );
     await createDatabase();
+
+    console.log("Attempting to migrate contract types...");
+    await migrateContractTypes();
 
     console.log("Attempting to sync database tables with local models...");
     await syncDB();
