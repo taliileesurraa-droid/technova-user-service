@@ -6,9 +6,7 @@ const { validateContractDates } = require("../middleware/dateValidation");
 
 // Put SPECIFIC routes BEFORE parameterized routes
 router.get('/active', authorize("admin", "superadmin", "passenger", "driver"), controller.getActiveContracts);
-router.get('/individual', authorize("admin", "superadmin", "passenger", "driver"), controller.getIndividualContracts);
-router.get('/group', authorize("admin", "superadmin", "passenger", "driver"), controller.getGroupContracts);
-router.get('/institutional', authorize("admin", "superadmin", "passenger", "driver"), controller.getInstitutionalContracts);
+router.get('/type/:typeId', authorize("admin", "superadmin", "passenger", "driver"), controller.getContractsByType);
 
 // Parameterized routes should come AFTER specific routes
 router.post("/", authorize("admin", "superadmin"), validateContractDates, controller.createContract);

@@ -13,6 +13,7 @@ const tripRoutes = require("./tripRoutes");
 const passengerRoutes = require("./passengerRoutes");
 const driverRoutes = require("./driverRoutes");
 const adminRoutes = require("./adminRoutes");
+const contractTypeRoutes = require("./contractTypeRoutes");
 
 // New workflow routes
 const newSubscriptionRoutes = require("./newSubscriptionRoutes");
@@ -35,6 +36,7 @@ router.use("/trip", tripRoutes);
 router.use("/passenger", passengerRoutes);
 router.use("/driver", driverRoutes);
 router.use("/admin", adminRoutes);
+router.use("/contract-types", contractTypeRoutes);
 
 // New workflow routes
 router.use("/subscription", newSubscriptionRoutes);

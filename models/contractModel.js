@@ -24,9 +24,15 @@ const Contract = sequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
-    contract_type: {
-      type: DataTypes.ENUM("INDIVIDUAL", "GROUP", "INSTITUTIONAL"),
+    contract_type_id: {
+      type: DataTypes.UUID,
       allowNull: false,
+      references: {
+        model: "contract_types",
+        key: "id",
+      },
+      onUpdate: "CASCADE",
+      onDelete: "RESTRICT",
     },
     start_date: {
       type: DataTypes.DATEONLY,

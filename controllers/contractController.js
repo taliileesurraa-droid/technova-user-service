@@ -1,4 +1,4 @@
-const { Contract, Discount, Subscription } = require("../models/indexModel");
+const { Contract, Discount, Subscription, ContractType } = require("../models/indexModel");
 const { asyncHandler } = require("../middleware/errorHandler");
 const { getPassengerById, getDriverById } = require("../utils/userService");
 
@@ -12,7 +12,25 @@ const findActiveDiscount = async (discountId) => {
 
 // CREATE
 exports.createContract = asyncHandler(async (req, res) => {
-  const { cost, has_discount, discount_id } = req.body;
+  const { cost, has_discount, discount_id, contract_type_id } = req.body;
+  
+  // Validate contract type exists
+  if (contract_type_id) {
+    const contractType = await ContractType.findByPk(contract_type_id);
+    if (!contractType) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid contract type ID"
+      });
+    }
+    if (!contractType.is_active) {
+      return res.status(400).json({
+        success: false,
+        message: "Contract type is not active"
+      });
+    }
+  }
+
   let finalCost = parseFloat(cost);
 
   if (has_discount === true && discount_id) {
@@ -26,7 +44,13 @@ exports.createContract = asyncHandler(async (req, res) => {
 
   const contractData = { ...req.body, cost: finalCost.toFixed(2) };
   const contract = await Contract.create(contractData);
-  res.status(201).json({ success: true, data: contract });
+  
+  // Include contract type in response
+  const contractWithType = await Contract.findByPk(contract.id, {
+    include: [{ model: ContractType, as: "contractType" }]
+  });
+  
+  res.status(201).json({ success: true, data: contractWithType });
 });
 
 // UPDATE
@@ -96,7 +120,13 @@ exports.getContracts = asyncHandler(async (req, res) => {
 
   const contracts = await Contract.findAll({
     where: whereClause,
-    include: ["discount", "subscriptions", "payments", "ride_schedules"],
+    include: [
+      "discount", 
+      "subscriptions", 
+      "payments", 
+      "ride_schedules",
+      { model: ContractType, as: "contractType" }
+    ],
   });
   const list = contracts.map(c => c.toJSON());
   const passengerIds = new Set();
@@ -141,7 +171,13 @@ exports.getContracts = asyncHandler(async (req, res) => {
 // READ one - Admin sees all, Passenger sees only their own
 exports.getContract = asyncHandler(async (req, res) => {
   const contract = await Contract.findByPk(req.params.id, {
-    include: ["discount", "subscriptions", "payments", "ride_schedules"],
+    include: [
+      "discount", 
+      "subscriptions", 
+      "payments", 
+      "ride_schedules",
+      { model: ContractType, as: "contractType" }
+    ],
   });
 
   if (!contract) {
@@ -207,30 +243,30 @@ exports.getActiveContracts = asyncHandler(async (req, res) => {
   res.json({ success: true, data: contracts });
 });
 
-// NEW: Get INDIVIDUAL contracts
-exports.getIndividualContracts = asyncHandler(async (req, res) => {
-  const contracts = await Contract.findAll({
-    where: { contract_type: "INDIVIDUAL" },
-    // include: ["discount", "subscriptions", "payments", "ride_schedules"],
-  });
-  res.json({ success: true, data: contracts });
-});
+// NEW: Get contracts by contract type ID
+exports.getContractsByType = asyncHandler(async (req, res) => {
+  const { typeId } = req.params;
+  
+  // Validate contract type exists
+  const contractType = await ContractType.findByPk(typeId);
+  if (!contractType) {
+    return res.status(404).json({
+      success: false,
+      message: "Contract type not found"
+    });
+  }
 
-// NEW: Get GROUP contracts
-exports.getGroupContracts = asyncHandler(async (req, res) => {
   const contracts = await Contract.findAll({
-    where: { contract_type: "GROUP" },
-    // include: ["discount", "subscriptions", "payments", "ride_schedules"],
+    where: { contract_type_id: typeId },
+    include: [
+      "discount", 
+      "subscriptions", 
+      "payments", 
+      "ride_schedules",
+      { model: ContractType, as: "contractType" }
+    ],
   });
-  res.json({ success: true, data: contracts });
-});
-
-// NEW: Get INSTITUTIONAL contracts
-exports.getInstitutionalContracts = asyncHandler(async (req, res) => {
-  const contracts = await Contract.findAll({
-    where: { contract_type: "INSTITUTIONAL" },
-    // include: ["discount", "subscriptions", "payments", "ride_schedules"],
-  });
+  
   res.json({ success: true, data: contracts });
 });
 // DELETE
